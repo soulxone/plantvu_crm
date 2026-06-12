@@ -9,6 +9,18 @@
     <div class="flex-1 overflow-y-auto">
       <div class="flex flex-col">
         <SidebarLink
+          id="search-btn"
+          :label="__('Search')"
+          :icon="LucideSearch"
+          :isCollapsed="isSidebarCollapsed"
+          class="mx-2 my-[1.5px]"
+          @click="openSearchPalette()"
+        >
+          <template #right>
+            <span v-if="!isSidebarCollapsed" class="text-xs text-ink-gray-4">⌘K</span>
+          </template>
+        </SidebarLink>
+        <SidebarLink
           id="notifications-btn"
           :label="__('Notifications')"
           :icon="NotificationsIcon"
@@ -154,6 +166,8 @@
 
 <script setup>
 import BrushCleaningIcon from '~icons/lucide/brush-cleaning'
+import LucideSearch from '~icons/lucide/search'
+import { openSearchPalette } from '@/composables/useSearchPalette'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import InviteIcon from '@/components/Icons/InviteIcon.vue'

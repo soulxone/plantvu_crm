@@ -6,12 +6,14 @@
     </Layout>
     <Dialogs />
     <DoctypeModals />
+    <SearchPalette v-if="session.isLoggedIn" />
   </FrappeUIProvider>
 </template>
 
 <script setup>
 import NotPermitted from '@/pages/NotPermitted.vue'
 import DoctypeModals from '@/components/Modals/DoctypeModals.vue'
+import SearchPalette from '@/components/SearchPalette.vue'
 import { Dialogs } from '@/utils/dialogs'
 import { sessionStore } from '@/stores/session'
 import { FrappeUIProvider, setConfig, useTheme } from 'frappe-ui'
