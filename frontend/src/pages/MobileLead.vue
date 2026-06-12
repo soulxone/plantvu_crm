@@ -24,12 +24,15 @@
           <template #default="{ open }">
             <Button
               v-if="doc.status"
-              :label="statusLabel(doc.status)"
               :iconRight="open ? 'chevron-up' : 'chevron-down'"
             >
-              <template #prefix>
+              <span
+                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                :class="parsePillColor(getLeadStatus(doc.status).color)"
+              >
                 <IndicatorIcon :class="getLeadStatus(doc.status).color" />
-              </template>
+                {{ statusLabel(doc.status) }}
+              </span>
             </Button>
           </template>
         </Dropdown>
@@ -143,7 +146,7 @@ import AssignTo from '@/components/AssignTo.vue'
 import SidePanelLayout from '@/components/SidePanelLayout.vue'
 import SLASection from '@/components/SLASection.vue'
 import CustomActions from '@/components/CustomActions.vue'
-import { setupCustomizations, isTranslatable } from '@/utils'
+import { setupCustomizations, isTranslatable, parsePillColor } from '@/utils'
 import { getView } from '@/utils/view'
 import { getSettings } from '@/stores/settings'
 import { globalStore } from '@/stores/global'

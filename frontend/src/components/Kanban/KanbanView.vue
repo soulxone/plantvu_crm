@@ -50,7 +50,12 @@
                   </div>
                 </template>
               </Popover>
-              <div class="text-ink-gray-9">{{ column.column.name }}</div>
+              <div
+                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                :class="parsePillColor(column.column.color)"
+              >
+                {{ column.column.name }}
+              </div>
             </div>
             <div class="flex">
               <Dropdown :options="actions(column)">
@@ -175,7 +180,12 @@
 import RefreshIcon from '@/components/Icons/RefreshIcon.vue'
 import Autocomplete from '@/components/frappe-ui/Autocomplete.vue'
 import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
-import { isTouchScreenDevice, colors, parseColor } from '@/utils'
+import {
+  isTouchScreenDevice,
+  colors,
+  parseColor,
+  parsePillColor,
+} from '@/utils'
 import Draggable from 'vuedraggable'
 import { Dropdown, Popover } from 'frappe-ui'
 import { computed } from 'vue'

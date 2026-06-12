@@ -433,6 +433,36 @@ export function parseColor(color) {
   return textColor
 }
 
+export function parsePillColor(color) {
+  // Soft pill colors (Clarity): bg-surface-{family} + text-ink-{family}.
+  // Accepts a raw color name ('blue') or a parseColor() output ('!text-blue-600'),
+  // since statuses.js pre-transforms status.color via parseColor.
+  let c = color || 'gray'
+  if (c.startsWith('!text-')) {
+    c = c.startsWith('!text-ink-gray')
+      ? 'black'
+      : c.slice('!text-'.length).replace(/-\d+$/, '')
+  }
+
+  const pillClasses = {
+    gray: 'bg-surface-gray-2 text-ink-gray-6',
+    blue: 'bg-surface-blue-2 text-ink-blue-3',
+    green: 'bg-surface-green-2 text-ink-green-3',
+    red: 'bg-surface-red-2 text-ink-red-3',
+    amber: 'bg-surface-amber-2 text-ink-amber-3',
+    orange: 'bg-surface-amber-2 text-ink-amber-3',
+    yellow: 'bg-surface-amber-2 text-ink-amber-3',
+    teal: 'bg-surface-blue-2 text-ink-blue-3',
+    // these families only ship -1 surface/ink shades in frappe-ui
+    cyan: 'bg-surface-cyan-1 text-ink-cyan-1',
+    purple: 'bg-surface-violet-1 text-ink-violet-1',
+    pink: 'bg-surface-pink-1 text-ink-pink-1',
+    black: 'bg-surface-gray-2 text-ink-gray-7',
+  }
+
+  return pillClasses[c] || pillClasses.gray
+}
+
 export function isEmoji(str) {
   const emojiList = gemoji.map((emoji) => emoji.emoji)
   return emojiList.includes(str)

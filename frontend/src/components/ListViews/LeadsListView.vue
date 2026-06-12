@@ -64,7 +64,22 @@
             />
           </div>
           <div v-else-if="column.key === 'status'">
-            <IndicatorIcon :class="item.color" />
+            <span
+              class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+              :class="parsePillColor(item.color)"
+              @click="
+                (event) =>
+                  emit('applyFilter', {
+                    event,
+                    idx,
+                    column,
+                    item,
+                    firstColumn: columns[0],
+                  })
+              "
+            >
+              {{ item.label }}
+            </span>
           </div>
           <div v-else-if="column.key === 'lead_name'">
             <Avatar
@@ -178,6 +193,8 @@
                 })
             "
           />
+          <!-- status label is rendered as a pill in the prefix slot -->
+          <div v-else-if="column.key === 'status'" />
           <div
             v-else-if="label"
             class="truncate text-base"
@@ -222,13 +239,12 @@
 
 <script setup>
 import HeartIcon from '@/components/Icons/HeartIcon.vue'
-import IndicatorIcon from '@/components/Icons/IndicatorIcon.vue'
 import PhoneIcon from '@/components/Icons/PhoneIcon.vue'
 import RatingInput from '@/components/Controls/RatingInput.vue'
 import MultipleAvatar from '@/components/MultipleAvatar.vue'
 import ListBulkActions from '@/components/ListBulkActions.vue'
 import ListRows from '@/components/ListViews/ListRows.vue'
-import { isTranslatable, formatDuration } from '@/utils'
+import { isTranslatable, formatDuration, parsePillColor } from '@/utils'
 import {
   Avatar,
   ListView,

@@ -289,10 +289,10 @@ async function initMap() {
     drawControl = new L.Control.Draw({
       position: 'topleft',
       draw: {
-        polyline: { shapeOptions: { color: '#4f46e5', weight: 4 } },
+        polyline: { shapeOptions: { color: '#0B9E92', weight: 4 } },
         polygon: {
           allowIntersection: false,
-          shapeOptions: { color: '#4f46e5' },
+          shapeOptions: { color: '#0B9E92' },
         },
         circle: true,
         rectangle: { shapeOptions: { clickable: false } },

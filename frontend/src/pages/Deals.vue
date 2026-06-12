@@ -44,7 +44,12 @@
     <template #title="{ titleField, itemName }">
       <div class="flex gap-2 items-center">
         <div v-if="titleField === 'status'">
-          <IndicatorIcon :class="getRow(itemName, titleField).color" />
+          <span
+            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+            :class="parsePillColor(getRow(itemName, titleField).color)"
+          >
+            {{ getRow(itemName, titleField).label }}
+          </span>
         </div>
         <div
           v-else-if="
@@ -96,6 +101,8 @@
             :label="getRow(itemName, titleField).value"
           />
         </div>
+        <!-- status label is rendered as a pill above -->
+        <div v-else-if="titleField === 'status'" />
         <div
           v-else-if="getRow(itemName, titleField).label"
           class="truncate text-base"
@@ -112,7 +119,12 @@
         class="truncate flex items-center gap-2"
       >
         <div v-if="fieldName === 'status'">
-          <IndicatorIcon :class="getRow(itemName, fieldName).color" />
+          <span
+            class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+            :class="parsePillColor(getRow(itemName, fieldName).color)"
+          >
+            {{ getRow(itemName, fieldName).label }}
+          </span>
         </div>
         <div v-else-if="fieldName === 'organization'">
           <Avatar
@@ -166,6 +178,8 @@
             size="xs"
           />
         </div>
+        <!-- status label is rendered as a pill above -->
+        <div v-else-if="fieldName === 'status'" />
         <div v-else class="truncate text-base">
           {{ getRow(itemName, fieldName).label }}
         </div>
@@ -265,7 +279,13 @@ import { usersStore } from '@/stores/users'
 import { organizationsStore } from '@/stores/organizations'
 import { statusesStore } from '@/stores/statuses'
 import { callEnabled } from '@/composables/telephony'
-import { formatDate, timeAgo, website, formatTime } from '@/utils'
+import {
+  formatDate,
+  timeAgo,
+  website,
+  formatTime,
+  parsePillColor,
+} from '@/utils'
 import { useOnboarding, useTelemetry } from 'frappe-ui/frappe'
 import { Tooltip, Avatar, Dropdown } from 'frappe-ui'
 import { useRoute } from 'vue-router'

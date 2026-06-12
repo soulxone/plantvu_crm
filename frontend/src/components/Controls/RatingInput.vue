@@ -125,7 +125,7 @@ function onStarClick(event, i) {
   --rating-filled: #eab308; /* yellow-500 */
   --rating-preview: #fde68a; /* yellow-200 */
   --rating-removing: #fcd34d; /* yellow-300 */
-  --rating-empty: #d1d5db; /* gray-300   */
+  --rating-empty: var(--surface-gray-4);
 }
 
 /* Dark mode — [data-theme="dark"] is how frappe-ui activates dark mode */
@@ -133,6 +133,6 @@ function onStarClick(event, i) {
   --rating-filled: #eab308; /* yellow-500 — same, readable on dark */
   --rating-preview: #fde68a; /* yellow-200 — bright preview on dark  */
   --rating-removing: #fcd34d; /* yellow-300                           */
-  --rating-empty: #4b5563; /* gray-600   — visible on dark bg      */
+  --rating-empty: var(--surface-gray-4); /* token adapts to dark bg */
 }
 </style>

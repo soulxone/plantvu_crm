@@ -102,8 +102,8 @@
               'text-ink-green-2': file.uploaded == file.total,
             }"
             :theme="{
-              primary: '#22C55E',
-              secondary: 'lightgray',
+              primary: '#278F5E',
+              secondary: '#C7C7C7',
             }"
             :step="file.uploaded || 1"
             :totalSteps="file.total || 100"

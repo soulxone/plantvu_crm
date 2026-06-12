@@ -305,39 +305,25 @@ input[type='radio'] {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  border: 2px solid #c5c2c2;
+  border: 2px solid var(--outline-gray-2);
   border-radius: 50%;
   outline: none;
   transition: all 0.2s ease;
-  background-color: white;
+  background-color: var(--surface-white);
 }
 
 input[type='radio']:checked {
-  background-color: black;
-  border: 2px solid #000;
+  background-color: var(--surface-gray-7);
+  border: 2px solid var(--surface-gray-7);
 }
 
 input[type='radio']:checked::after {
   content: '';
-  background-color: #fff;
+  background-color: var(--surface-white);
 }
 
 input[type='radio']:focus {
   outline: none !important;
   box-shadow: none !important;
-}
-
-[data-theme='dark'] input[type='radio'] {
-  border: 2px solid #525252;
-  background-color: transparent;
-}
-
-[data-theme='dark'] input[type='radio']:checked {
-  background-color: #171717;
-  border: 2px solid #fff;
-}
-
-[data-theme='dark'] input[type='radio']:checked::after {
-  background-color: #171717;
 }
 </style>
