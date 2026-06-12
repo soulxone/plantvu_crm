@@ -40,7 +40,7 @@
             @click="runAsk"
           >
             <LucideSparkles class="h-4 w-4 shrink-0 text-ink-violet-2" />
-            <span class="text-base text-ink-violet-2">{{ __('Ask Plantvu') }}: “{{ query }}”</span>
+            <span class="text-base text-ink-violet-2">{{ __('Ask Danczyk') }}: “{{ query }}”</span>
           </button>
           <div v-if="asking" class="flex items-center gap-2.5 px-3 py-2.5">
             <LucideSparkles class="h-4 w-4 animate-pulse text-ink-violet-2" />
