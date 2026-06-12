@@ -12,7 +12,15 @@ export default {
   ],
   safelist: [{ pattern: /!(text|bg)-/, variants: ['hover', 'active'] }],
   theme: {
-    extend: {},
+    extend: {
+      borderRadius: {
+        DEFAULT: '0.5rem',
+        md: '0.625rem',
+        lg: '0.75rem',
+        xl: '1rem',
+        '2xl': '1.25rem',
+      },
+    },
   },
   plugins: [],
 }

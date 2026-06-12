@@ -1,0 +1,76 @@
+/*
+  Clarity — iOS-inspired theme for Plantvu Connect.
+
+  Remaps the frappe-ui "blue" accent family to teal (Plantvu brand #0A8F7E sits at
+  teal-600 #0B9E92) for BOTH light (:root) and dark ([data-theme="dark"]) modes.
+  frappe-ui bakes its semantic vars to literal hex at build time and components also
+  use the raw blue ramp directly (bg-blue-500, ring-blue-400, active:bg-blue-700),
+  so we override the raw `--blue-*` ramp AND the semantic `--*-blue-*` vars.
+
+  Radii live in tailwind.config.js (borderRadius); status tints live in
+  StatusBadge.vue / TaskStatusIcon.vue. Imported from index.css AFTER frappe-ui's
+  stylesheet so these overrides win by source order.
+*/
+
+:root {
+  --clarity-build: 'clarity-v1';
+
+  /* accent: raw blue ramp -> teal ramp (light) */
+  --blue-50: #f0fdfa;
+  --blue-100: #e6f7f4;
+  --blue-200: #bae8e1;
+  --blue-300: #97ded4;
+  --blue-400: #73d1c4;
+  --blue-500: #36baad;
+  --blue-600: #0b9e92;
+  --blue-700: #0f736b;
+  --blue-800: #115c57;
+  --blue-900: #114541;
+
+  /* accent: semantic blue vars -> teal (light) */
+  --ink-blue-1: #f0fdfa;
+  --ink-blue-2: #36baad;
+  --ink-blue-3: #0b9e92;
+  --ink-blue-link: #0b9e92;
+  --surface-blue-1: #f0fdfa;
+  --surface-blue-2: #e6f7f4;
+  --surface-blue-3: #0b9e92;
+  --outline-blue-1: #97ded4;
+}
+
+[data-theme='dark'] {
+  /* accent: raw blue ramp -> teal ramp (dark) */
+  --dark-blue-50: #93f2e8;
+  --dark-blue-100: #6ee7db;
+  --dark-blue-200: #52dacc;
+  --dark-blue-300: #3dc6b8;
+  --dark-blue-400: #219c8f;
+  --dark-blue-500: #1b7169;
+  --dark-blue-600: #13564f;
+  --dark-blue-700: #0c423c;
+  --dark-blue-800: #0b3a35;
+  --dark-blue-900: #0a2d29;
+  --dark-blue-900-80: #0a2d29cc;
+
+  /* accent: semantic blue vars -> teal (dark) */
+  --ink-blue-1: #ffffff;
+  --ink-blue-2: #3dc6b8;
+  --ink-blue-3: #52dacc;
+  --ink-blue-link: #3dc6b8;
+  --surface-blue-1: #0a2d29;
+  --surface-blue-2: #0b3a35;
+  --surface-blue-3: #219c8f;
+  --outline-blue-1: #0b3a35;
+}
+
+/*
+  Apple system font on Apple devices; Inter (the app's bundled font) everywhere
+  else — -apple-system / BlinkMacSystemFont are unknown off-Apple and fall through
+  to Inter, so Windows/Linux keep Inter unchanged.
+*/
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto,
+    system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

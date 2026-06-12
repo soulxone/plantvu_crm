@@ -1,4 +1,5 @@
 @import 'frappe-ui/style.css';
+@import './clarity.css';
 
 @layer components {
   .prose-f {
