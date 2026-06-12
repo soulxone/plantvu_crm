@@ -44,6 +44,7 @@
       />
     </template>
   </LayoutHeader>
+  <CollisionGuard v-if="doc.name" doctype="CRM Lead" :docname="leadId" class="mx-5 mt-2" />
   <div v-if="doc.name" class="flex h-full overflow-hidden">
     <Tabs
       v-model="tabIndex"
@@ -255,6 +256,7 @@ import LinkIcon from '@/components/Icons/LinkIcon.vue'
 import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import LostReasonModal from '@/components/Modals/LostReasonModal.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
+import CollisionGuard from '@/components/CollisionGuard.vue'
 import Activities from '@/components/Activities/Activities.vue'
 import AssignTo from '@/components/AssignTo.vue'
 import FilesUploader from '@/components/FilesUploader/FilesUploader.vue'
