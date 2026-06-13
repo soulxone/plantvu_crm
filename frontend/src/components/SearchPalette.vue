@@ -240,7 +240,10 @@ function openHit(hit) {
   } else if (hit.kind === 'portfolio') {
     window.location.href = '/g/portfolios'
   } else if (hit.kind === 'file' && hit.file_url) {
-    window.open(hit.file_url, '_blank')
+    const u = String(hit.file_url)
+    // allow only same-origin relative paths or explicit http(s); reject javascript:/data:/vbscript:
+    const ok = (/^\/(?!\/)/.test(u)) || (/^https?:\/\//i.test(u))
+    if (ok) window.open(u, '_blank', 'noopener,noreferrer')
   } else {
     const slug = (hit.doctype || '').toLowerCase().replace(/ /g, '-')
     window.location.href = `/app/${slug}/${encodeURIComponent(name)}`

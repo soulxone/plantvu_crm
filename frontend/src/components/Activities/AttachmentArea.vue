@@ -90,7 +90,10 @@ const emit = defineEmits(['reload'])
 const { $dialog } = globalStore()
 
 function openFile(attachment) {
-  window.open(attachment.file_url, '_blank')
+  const u = String(attachment.file_url || '')
+  // allow only same-origin relative paths or explicit http(s); reject javascript:/data:/vbscript:
+  const ok = (/^\/(?!\/)/.test(u)) || (/^https?:\/\//i.test(u))
+  if (ok) window.open(u, '_blank', 'noopener,noreferrer')
 }
 
 function togglePrivate(fileName, isPrivate) {

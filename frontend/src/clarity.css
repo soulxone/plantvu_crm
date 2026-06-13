@@ -13,7 +13,7 @@
 */
 
 :root {
-  --clarity-build: 'clarity-v1';
+  --clarity-build: 'clarity-v2';
 
   /* accent: raw blue ramp -> teal ramp (light) */
   --blue-50: #f0fdfa;
@@ -73,4 +73,26 @@ body {
     system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+  Clarity v2 — additive "eye-catching" polish (no layout changes, safe over
+  frappe-ui internals): an iOS teal focus-glow ring on every interactive
+  control, a tactile active-press, and a soft hover-lift on cards.
+*/
+:where(input, select, textarea, button, a[role='button'], [tabindex]):focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3.5px rgba(11, 158, 146, 0.2) !important;
+}
+button:active:not([disabled]),
+a[role='button']:active {
+  transform: translateY(0.5px);
+}
+button,
+a[role='button'] {
+  transition: transform 0.08s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+[class*='rounded-'][class*='shadow'],
+.cursor-pointer[class*='border'][class*='rounded-lg'] {
+  transition: box-shadow 0.16s ease, transform 0.16s ease;
 }
