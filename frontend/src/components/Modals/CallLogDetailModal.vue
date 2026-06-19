@@ -144,6 +144,11 @@
             </div>
           </div>
         </div>
+        <CallIntelligencePanel
+          v-if="callLog?.data?.name"
+          :call-log="callLog.data.name"
+          class="mt-4"
+        />
       </div>
       <div
         v-if="!callLog?.data?._lead && !callLog?.data?._deal"
@@ -172,6 +177,7 @@ import NoteIcon from '@/components/Icons/NoteIcon.vue'
 import TaskIcon from '@/components/Icons/TaskIcon.vue'
 import CheckCircleIcon from '@/components/Icons/CheckCircleIcon.vue'
 import FadedScrollableDiv from '@/components/FadedScrollableDiv.vue'
+import CallIntelligencePanel from '@/components/CallIntelligencePanel.vue'
 import { getCallLogDetail } from '@/utils/callLog'
 import { sanitizeHTML } from '@/utils'
 import { isMobileView } from '@/composables/settings'

@@ -32,6 +32,7 @@ def after_install(force=False):
 	create_assignment_rule_custom_fields()
 	add_assignment_rule_property_setters()
 	add_sales_ai_custom_fields()
+	add_conversation_intelligence_custom_fields()
 	frappe.db.commit()
 
 
@@ -40,6 +41,13 @@ def add_sales_ai_custom_fields():
 	from crm.api.sales_ai import install_sales_ai_custom_fields
 
 	install_sales_ai_custom_fields()
+
+
+def add_conversation_intelligence_custom_fields():
+	"""Plantvu Conversation Intelligence — pv_ci_* fields on CRM Call Log."""
+	from crm.api.conversation_intelligence import install_ci_custom_fields
+
+	install_ci_custom_fields()
 
 
 def add_default_lead_statuses():
