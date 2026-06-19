@@ -33,6 +33,7 @@ def after_install(force=False):
 	add_assignment_rule_property_setters()
 	add_sales_ai_custom_fields()
 	add_conversation_intelligence_custom_fields()
+	add_forecast_custom_fields()
 	frappe.db.commit()
 
 
@@ -48,6 +49,13 @@ def add_conversation_intelligence_custom_fields():
 	from crm.api.conversation_intelligence import install_ci_custom_fields
 
 	install_ci_custom_fields()
+
+
+def add_forecast_custom_fields():
+	"""Plantvu Forecast — pv_forecast_included on Deal + AI-narrative toggle on Settings."""
+	from crm.api.forecast import install_forecast_custom_fields
+
+	install_forecast_custom_fields()
 
 
 def add_default_lead_statuses():

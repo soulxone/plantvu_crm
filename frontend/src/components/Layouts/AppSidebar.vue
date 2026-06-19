@@ -169,6 +169,7 @@ import BrushCleaningIcon from '~icons/lucide/brush-cleaning'
 import LucideSearch from '~icons/lucide/search'
 import { openSearchPalette } from '@/composables/useSearchPalette'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
+import LucideTrendingUp from '~icons/lucide/trending-up'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import InviteIcon from '@/components/Icons/InviteIcon.vue'
 import ConvertIcon from '@/components/Icons/ConvertIcon.vue'
@@ -237,6 +238,11 @@ const links = [
     label: 'Dashboard',
     icon: LucideLayoutDashboard,
     to: 'Dashboard',
+  },
+  {
+    label: 'Forecast',
+    icon: LucideTrendingUp,
+    to: 'Forecast',
   },
   {
     label: 'Leads',
