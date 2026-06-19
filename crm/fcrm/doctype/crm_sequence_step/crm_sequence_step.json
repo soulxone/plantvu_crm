@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-06-19 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "action_type",
+  "wait_days",
+  "column_break_a",
+  "subject",
+  "email_body",
+  "task_title",
+  "task_description",
+  "task_priority"
+ ],
+ "fields": [
+  {
+   "default": "Email",
+   "fieldname": "action_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Action",
+   "options": "Email\nTask\nCall",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Days to wait before this step runs (relative to the previous step).",
+   "fieldname": "wait_days",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Wait (days)"
+  },
+  {
+   "fieldname": "column_break_a",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.action_type=='Email'",
+   "fieldname": "subject",
+   "fieldtype": "Data",
+   "label": "Email Subject"
+  },
+  {
+   "depends_on": "eval:doc.action_type=='Email'",
+   "fieldname": "email_body",
+   "fieldtype": "Long Text",
+   "label": "Email Body"
+  },
+  {
+   "depends_on": "eval:doc.action_type=='Task' || doc.action_type=='Call'",
+   "fieldname": "task_title",
+   "fieldtype": "Data",
+   "label": "Task Title"
+  },
+  {
+   "depends_on": "eval:doc.action_type=='Task' || doc.action_type=='Call'",
+   "fieldname": "task_description",
+   "fieldtype": "Small Text",
+   "label": "Task Description"
+  },
+  {
+   "default": "Low",
+   "depends_on": "eval:doc.action_type=='Task' || doc.action_type=='Call'",
+   "fieldname": "task_priority",
+   "fieldtype": "Select",
+   "label": "Task Priority",
+   "options": "Low\nMedium\nHigh"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Sequence Step",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

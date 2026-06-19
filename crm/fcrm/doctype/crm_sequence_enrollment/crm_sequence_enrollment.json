@@ -1,0 +1,99 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-06-19 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sequence",
+  "status",
+  "column_break_top",
+  "lead",
+  "deal",
+  "section_state",
+  "current_step_index",
+  "next_run",
+  "column_break_state",
+  "enrolled_on",
+  "enrolled_by",
+  "last_executed_on",
+  "last_executed_step",
+  "section_log",
+  "execution_log"
+ ],
+ "fields": [
+  {
+   "fieldname": "sequence",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sequence",
+   "options": "CRM Sequence",
+   "reqd": 1
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Active\nPaused\nCompleted\nAbandoned"
+  },
+  {"fieldname": "column_break_top", "fieldtype": "Column Break"},
+  {
+   "fieldname": "lead",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Lead",
+   "options": "CRM Lead"
+  },
+  {
+   "fieldname": "deal",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Deal",
+   "options": "CRM Deal"
+  },
+  {"fieldname": "section_state", "fieldtype": "Section Break", "label": "State"},
+  {
+   "default": "0",
+   "fieldname": "current_step_index",
+   "fieldtype": "Int",
+   "label": "Current Step Index"
+  },
+  {"fieldname": "next_run", "fieldtype": "Datetime", "label": "Next Run"},
+  {"fieldname": "column_break_state", "fieldtype": "Column Break"},
+  {"fieldname": "enrolled_on", "fieldtype": "Datetime", "label": "Enrolled On"},
+  {"fieldname": "enrolled_by", "fieldtype": "Link", "label": "Enrolled By", "options": "User"},
+  {"fieldname": "last_executed_on", "fieldtype": "Datetime", "label": "Last Executed On", "read_only": 1},
+  {"fieldname": "last_executed_step", "fieldtype": "Int", "label": "Last Executed Step", "read_only": 1},
+  {"fieldname": "section_log", "fieldtype": "Section Break", "label": "Execution Log"},
+  {"fieldname": "execution_log", "fieldtype": "Long Text", "label": "Execution Log", "read_only": 1}
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-19 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Sequence Enrollment",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1, "delete": 1, "email": 1, "export": 1, "print": 1,
+   "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1
+  },
+  {
+   "create": 1, "delete": 1, "email": 1, "export": 1, "print": 1,
+   "read": 1, "report": 1, "role": "Sales Manager", "share": 1, "write": 1
+  },
+  {
+   "create": 1, "read": 1, "write": 1, "role": "Sales User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

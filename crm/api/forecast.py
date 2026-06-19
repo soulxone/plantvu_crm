@@ -124,8 +124,10 @@ def get_forecast(from_date=None, to_date=None, owner=None):
 @frappe.whitelist()
 def get_forecast_narrative(from_date=None, to_date=None, owner=None):
 	"""AI narrative over the current forecast: strengths, risks, recommended focus."""
-	if frappe.db.has_column("FCRM Settings", "pv_enable_ai_forecast_narrative"):
-		if not frappe.db.get_single_value("FCRM Settings", "pv_enable_ai_forecast_narrative"):
+	# FCRM Settings is a Single doctype (no tab table) -> use meta.has_field, not has_column.
+	if frappe.get_meta("FCRM Settings").has_field("pv_enable_ai_forecast_narrative"):
+		val = frappe.db.get_single_value("FCRM Settings", "pv_enable_ai_forecast_narrative")
+		if val is not None and not val:  # unset -> default enabled; explicit 0 -> off
 			return {"narrative": _("AI forecast narrative is turned off in CRM Settings.")}
 	data = get_forecast(from_date, to_date, owner)
 	call_claude = _get_call_claude()

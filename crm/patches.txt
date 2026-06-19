@@ -28,3 +28,4 @@ crm.patches.v1_0.create_default_quick_filters
 crm.patches.v1_0.add_sales_ai_custom_fields # plantvu sales ai
 crm.patches.v1_0.add_conversation_intelligence_custom_fields # plantvu conversation intelligence
 crm.patches.v1_0.add_forecast_fields # plantvu forecast
+crm.patches.v1_0.add_sequence_custom_fields # plantvu sequences

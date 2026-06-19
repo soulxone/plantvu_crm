@@ -180,17 +180,33 @@ doc_events = {
 		"before_validate": ["crm.api.live_demo.validate_user"],
 		"validate_reset_password": ["crm.api.live_demo.validate_reset_password"],
 	},
+	"CRM Sequence": {
+		"after_insert": ["crm.api.sequences.clear_sequence_cache"],
+		"on_update": ["crm.api.sequences.clear_sequence_cache"],
+	},
+	"CRM Sequence Enrollment": {
+		"after_insert": ["crm.api.sequences.on_enrollment_insert"],
+		"on_update": ["crm.api.sequences.on_enrollment_update"],
+	},
 }
 
 # Scheduled Tasks
 # ---------------
 
 scheduler_events = {
-	"daily_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_daily"],
+	"daily_long": [
+		"crm.lead_syncing.background_sync.sync_leads_from_sources_daily",
+		"crm.api.sequences.abandon_stale_enrollments",
+	],
 	"hourly_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_hourly"],
 	"monthly_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_monthly"],
 	"cron": {
-		"*/5 * * * *": ["crm.lead_syncing.background_sync.sync_leads_from_sources_5_minutes"],
+		# NOTE: append to the existing */5 list — a duplicate "*/5 * * * *" key would
+		# silently overwrite lead-sync. Plantvu Sequences runner rides this slot.
+		"*/5 * * * *": [
+			"crm.lead_syncing.background_sync.sync_leads_from_sources_5_minutes",
+			"crm.api.sequences.run_due_sequence_steps",
+		],
 		"*/10 * * * *": ["crm.lead_syncing.background_sync.sync_leads_from_sources_10_minutes"],
 		"*/15 * * * *": ["crm.lead_syncing.background_sync.sync_leads_from_sources_15_minutes"],
 	},

@@ -112,6 +112,11 @@ const routes = [
     component: () => import('@/pages/Forecast.vue'),
   },
   {
+    path: '/sequences',
+    name: 'Sequences',
+    component: () => import('@/pages/Sequences.vue'),
+  },
+  {
     path: '/:invalidpath',
     name: 'Invalid Page',
     component: () => import('@/pages/InvalidPage.vue'),

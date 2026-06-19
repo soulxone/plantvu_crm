@@ -170,6 +170,7 @@ import LucideSearch from '~icons/lucide/search'
 import { openSearchPalette } from '@/composables/useSearchPalette'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
 import LucideTrendingUp from '~icons/lucide/trending-up'
+import LucideListChecks from '~icons/lucide/list-checks'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import InviteIcon from '@/components/Icons/InviteIcon.vue'
 import ConvertIcon from '@/components/Icons/ConvertIcon.vue'
@@ -268,6 +269,11 @@ const links = [
     label: 'Notes',
     icon: NoteIcon,
     to: 'Notes',
+  },
+  {
+    label: 'Sequences',
+    icon: LucideListChecks,
+    to: 'Sequences',
   },
   {
     label: 'Tasks',

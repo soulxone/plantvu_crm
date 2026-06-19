@@ -34,6 +34,7 @@ def after_install(force=False):
 	add_sales_ai_custom_fields()
 	add_conversation_intelligence_custom_fields()
 	add_forecast_custom_fields()
+	add_sequence_custom_fields()
 	frappe.db.commit()
 
 
@@ -56,6 +57,13 @@ def add_forecast_custom_fields():
 	from crm.api.forecast import install_forecast_custom_fields
 
 	install_forecast_custom_fields()
+
+
+def add_sequence_custom_fields():
+	"""Plantvu Sales Sequences — pv_sequence_* fields on Lead/Deal."""
+	from crm.api.sequences import install_sequence_custom_fields
+
+	install_sequence_custom_fields()
 
 
 def add_default_lead_statuses():

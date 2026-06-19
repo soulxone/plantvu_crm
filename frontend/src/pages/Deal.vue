@@ -41,6 +41,7 @@
   </LayoutHeader>
   <CollisionGuard v-if="doc.name" doctype="CRM Deal" :docname="dealId" class="mx-5 mt-2" />
   <SalesAIPanel v-if="doc.name" doctype="CRM Deal" :docname="dealId" class="mx-5 mt-2" />
+  <SequencePanel v-if="doc.name" doctype="CRM Deal" :docname="dealId" class="mx-5 mt-2" />
   <div v-if="doc.name" class="flex h-full overflow-hidden">
     <Tabs
       v-model="tabIndex"
@@ -362,6 +363,7 @@ import AttachmentIcon from '@/components/Icons/AttachmentIcon.vue'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import CollisionGuard from '@/components/CollisionGuard.vue'
 import SalesAIPanel from '@/components/SalesAIPanel.vue'
+import SequencePanel from '@/components/SequencePanel.vue'
 import Activities from '@/components/Activities/Activities.vue'
 import OrganizationModal from '@/components/Modals/OrganizationModal.vue'
 import LostReasonModal from '@/components/Modals/LostReasonModal.vue'
