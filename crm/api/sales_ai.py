@@ -121,14 +121,18 @@ def _log(doctype, name, html):
 _SCORE_SCHEMA = {
 	"type": "object",
 	"properties": {
-		"score": {"type": "integer", "minimum": 0, "maximum": 100},
+		# NB: Anthropic structured-output JSON Schema does not support numeric
+		# minimum/maximum or array minItems/maxItems — bounds are stated in the
+		# system prompt instead ("0-100", "up to N").
+		"score": {"type": "integer"},
 		"tier": {"type": "string", "enum": ["Hot", "Warm", "Cool", "Cold"]},
 		"summary": {"type": "string"},
-		"reasons": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
-		"risks": {"type": "array", "items": {"type": "string"}, "maxItems": 4},
+		"reasons": {"type": "array", "items": {"type": "string"}},
+		"risks": {"type": "array", "items": {"type": "string"}},
 		"next_action": {"type": "string"},
 	},
-	"required": ["score", "tier", "summary", "reasons", "next_action"],
+	# Anthropic strict json_schema: every property must be in `required`.
+	"required": ["score", "tier", "summary", "reasons", "risks", "next_action"],
 	"additionalProperties": False,
 }
 
@@ -205,7 +209,7 @@ _QUALIFY_SCHEMA = {
 			"required": ["budget", "authority", "need", "timeline", "verdict"],
 			"additionalProperties": False,
 		},
-		"competitor_talking_points": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
+		"competitor_talking_points": {"type": "array", "items": {"type": "string"}},
 		"recommended_next_action": {"type": "string"},
 		"draft_email": {
 			"type": "object",
@@ -214,7 +218,7 @@ _QUALIFY_SCHEMA = {
 			"additionalProperties": False,
 		},
 	},
-	"required": ["qualification", "recommended_next_action", "draft_email"],
+	"required": ["qualification", "competitor_talking_points", "recommended_next_action", "draft_email"],
 	"additionalProperties": False,
 }
 
