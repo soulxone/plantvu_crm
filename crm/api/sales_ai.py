@@ -154,7 +154,7 @@ def score_record(doctype, name):
 	out = call_claude(
 		_SCORE_SYSTEM,
 		f"Score this {doctype}:\n\n{ctx}",
-		kind="crm_score",
+		kind="agent",  # core PV Agent Run allows: ask/summarize/extract_action_items/draft_reply/automation/agent
 		reference_doctype=doctype,
 		reference_name=name,
 		output_schema=_SCORE_SCHEMA,
@@ -245,7 +245,7 @@ def qualify_lead(name):
 
 	out = call_claude(
 		_QUALIFY_SYSTEM, user,
-		kind="crm_qualify",
+		kind="agent",
 		reference_doctype="CRM Lead",
 		reference_name=name,
 		output_schema=_QUALIFY_SCHEMA,
@@ -293,7 +293,7 @@ def compose_email(doctype, name, instruction, tone="professional"):
 
 	out = call_claude(
 		_COMPOSE_SYSTEM, user,
-		kind="crm_compose",
+		kind="draft_reply",
 		reference_doctype=doctype,
 		reference_name=name,
 	)
@@ -314,7 +314,7 @@ def summarize_thread(doctype, name):
 		"objections or competitor mentions, and the recommended next step. "
 		"Base everything strictly on the supplied messages.",
 		f"Thread for {doctype} {name}:\n\n{comms}",
-		kind="crm_summarize",
+		kind="summarize",
 		reference_doctype=doctype,
 		reference_name=name,
 	)
