@@ -31,7 +31,15 @@ def after_install(force=False):
 	create_default_manager_dashboard(force)
 	create_assignment_rule_custom_fields()
 	add_assignment_rule_property_setters()
+	add_sales_ai_custom_fields()
 	frappe.db.commit()
+
+
+def add_sales_ai_custom_fields():
+	"""Plantvu Sales AI — pv_ai_* score fields on Lead/Deal (counters Dynamics scoring)."""
+	from crm.api.sales_ai import install_sales_ai_custom_fields
+
+	install_sales_ai_custom_fields()
 
 
 def add_default_lead_statuses():
