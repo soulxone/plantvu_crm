@@ -130,7 +130,8 @@ const router = useRouter()
 
 const KIND_META = {
   lead: { label: 'Leads', color: '#FF9800' },
-  organization: { label: 'Customers', color: '#0B9E92' },
+  customer: { label: 'Customers', color: '#0B9E92' },
+  organization: { label: 'Organizations', color: '#7C4DFF' },
   deal: { label: 'Deals', color: '#3F51B5' },
 }
 const kindMeta = KIND_META
@@ -145,7 +146,7 @@ const geocoding = ref(false)
 const mapReady = ref(false)
 const keyMissing = ref(false)
 const repFilter = ref('')
-const activeKinds = reactive(new Set(['lead', 'organization', 'deal']))
+const activeKinds = reactive(new Set(['lead', 'customer', 'organization', 'deal']))
 const counts = reactive({})
 
 let map = null
@@ -361,7 +362,10 @@ function renderMarkers() {
 
 function openInfo(rec, marker) {
   const color = KIND_META[rec.kind]?.color || '#666'
-  const route = (rec.route || '').replace(/^\/crm/, '')
+  const rawRoute = rec.route || ''
+  // CRM SPA routes (/crm/...) navigate in-app; desk routes (/app/...) open a tab.
+  const isCrm = rawRoute.startsWith('/crm')
+  const route = isCrm ? rawRoute.replace(/^\/crm/, '') : rawRoute
   const html =
     `<div style="min-width:200px;font-family:inherit">` +
     `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">` +
@@ -376,7 +380,11 @@ function openInfo(rec, marker) {
   infoWindow.open(map, marker)
   google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
     const a = document.getElementById('crm-map-open')
-    if (a) a.addEventListener('click', (e) => { e.preventDefault(); router.push(route) })
+    if (a) a.addEventListener('click', (e) => {
+      e.preventDefault()
+      if (isCrm) router.push(route)
+      else window.open(route, '_blank')
+    })
   })
 }
 

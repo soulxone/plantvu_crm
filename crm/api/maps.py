@@ -22,10 +22,10 @@ from frappe.utils import cint, flt
 GEO_CACHE_KEY = "crm_map_geocode_cache"
 
 KINDS = {
-	"lead": {"label": "Lead", "color": "#FF9800"},
-	"organization": {"label": "Customer", "color": "#0B9E92"},
-	"deal": {"label": "Deal", "color": "#3F51B5"},
-	"contact": {"label": "Contact", "color": "#9C27B0"},
+	"lead": {"label": "Leads", "color": "#FF9800"},
+	"customer": {"label": "Customers", "color": "#0B9E92"},
+	"organization": {"label": "Organizations", "color": "#7C4DFF"},
+	"deal": {"label": "Deals", "color": "#3F51B5"},
 }
 
 
@@ -104,6 +104,51 @@ def _address_for(link_doctype, link_name):
 
 # ── record collectors ───────────────────────────────────────────────────────
 
+def _customer_rep_field(meta):
+	"""Best-effort rep/account-manager field on ERPNext Customer, if present."""
+	for f in ("account_manager", "custom_account_manager", "sales_rep", "custom_sales_rep"):
+		if _has(meta, f):
+			return f
+	return None
+
+
+def _collect_customers(rep, limit):
+	"""ERPNext Customer records (the real customer base on ERPNext sites)."""
+	if not frappe.db.exists("DocType", "Customer"):
+		return []
+	meta = frappe.get_meta("Customer")
+	fields = ["name", "customer_name"]
+	for f in ("customer_group", "territory"):
+		if _has(meta, f):
+			fields.append(f)
+	rep_field = _customer_rep_field(meta)
+	if rep_field:
+		fields.append(rep_field)
+	filters = {}
+	if _has(meta, "disabled"):
+		filters["disabled"] = 0
+	# Customers can only be rep-scoped when a rep field exists; otherwise all
+	# customers are shown (managers and reps alike) until such a field is added.
+	if rep and rep_field:
+		filters[rep_field] = rep
+	out = []
+	for r in frappe.get_all("Customer", fields=fields, filters=filters, limit=limit):
+		o = r.get(rep_field) if rep_field else ""
+		out.append({
+			"id": f"Customer::{r.name}",
+			"kind": "customer",
+			"label": r.get("customer_name") or r.name,
+			"sublabel": r.get("customer_group") or "",
+			"address": _address_for("Customer", r.name),
+			"status": r.get("customer_group") or "Customer",
+			"owner": o or "",
+			"owner_name": _rep_name(o) if o else "",
+			"territory": r.get("territory") or "",
+			"route": f"/app/customer/{r.name}",
+		})
+	return out
+
+
 def _lead_addr_fields(meta):
 	out = {}
 	cand = {
@@ -139,9 +184,9 @@ def _collect_leads(rep, limit):
 		filters["lead_owner"] = rep
 	out = []
 	for r in frappe.get_all("CRM Lead", fields=fields, filters=filters, limit=limit):
+		# Only map leads with a real structured address; geocoding a bare company
+		# name returns garbage, so address-less leads stay in the list unmapped.
 		addr = _addr_str({k: r.get(v) for k, v in af.items()}) if af else ""
-		if not addr and r.get("organization"):
-			addr = r.get("organization")
 		out.append({
 			"id": f"CRM Lead::{r.name}",
 			"kind": "lead",
@@ -292,7 +337,7 @@ def get_map_records(rep=None, kinds=None):
 	_require_crm_user()
 	if isinstance(kinds, str):
 		kinds = [k.strip() for k in kinds.replace("[", "").replace("]", "").replace('"', "").split(",") if k.strip()]
-	wanted = set(kinds) if kinds else {"lead", "organization", "deal"}
+	wanted = set(kinds) if kinds else {"lead", "customer", "organization", "deal"}
 
 	# enforce per-rep scoping for non-managers
 	if not _is_manager():
@@ -303,6 +348,8 @@ def get_map_records(rep=None, kinds=None):
 	records = []
 	if "lead" in wanted:
 		records += _collect_leads(rep, limit)
+	if "customer" in wanted:
+		records += _collect_customers(rep, limit)
 	if "organization" in wanted:
 		records += _collect_organizations(rep, limit)
 	if "deal" in wanted:
