@@ -93,11 +93,18 @@
           <div
             v-for="rec in visibleRecords.slice(0, 400)"
             :key="rec.id"
-            class="flex cursor-pointer items-center gap-2 border-b border-outline-gray-1 px-3 py-2 hover:bg-surface-gray-1"
-            @click="focusRecord(rec)"
+            class="flex items-center gap-2 border-b border-outline-gray-1 px-3 py-2 hover:bg-surface-gray-1"
+            :class="inRoute(rec.id) ? 'bg-surface-gray-2' : ''"
           >
+            <input
+              type="checkbox"
+              :checked="inRoute(rec.id)"
+              :disabled="rec.lat == null"
+              :title="__('Add to route')"
+              @click.stop="toggleRoute(rec)"
+            />
             <span class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ background: kindMeta[rec.kind].color }" />
-            <div class="min-w-0">
+            <div class="min-w-0 cursor-pointer" @click="focusRecord(rec)">
               <div class="truncate text-sm font-medium text-ink-gray-8">{{ rec.label }}</div>
               <div class="truncate text-xs text-ink-gray-5">{{ rec.sublabel || rec.address }}</div>
             </div>
@@ -116,6 +123,22 @@
       <!-- Map -->
       <div class="relative flex-1">
         <div ref="mapEl" class="h-full w-full" />
+
+        <!-- route selection bar -->
+        <div
+          v-if="routeStops.length"
+          class="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full border border-outline-gray-2 bg-surface-white px-4 py-2 shadow-lg"
+        >
+          <span class="text-sm font-medium text-ink-gray-8">
+            {{ routeStops.length === 1 ? __('1 stop selected') : `${routeStops.length} ${__('stops selected')}` }}
+          </span>
+          <Button variant="solid" :loading="routing" @click="planRoute">
+            <template #prefix><LucideRoute class="h-4 w-4" /></template>
+            {{ routeStops.length === 1 ? __('Route to stop') : __('Route selected') }}
+          </Button>
+          <Button variant="ghost" :label="__('Clear')" @click="clearRoute" />
+        </div>
+
         <div
           v-if="!mapReady"
           class="absolute inset-0 flex items-center justify-center bg-surface-white/80"
@@ -171,6 +194,7 @@ const plants = ref([])
 const showPlants = ref(true)
 const showCoverage = ref(true)
 const recomputing = ref(false)
+const routeStops = ref([]) // selected record ids, in pick order
 
 let map = null
 let infoWindow = null
@@ -427,12 +451,15 @@ function geocodeOne(addr, tries = 0) {
 }
 
 /* ── markers ───────────────────────────────────────────────────────────── */
-function pinIcon(kind) {
+function pinIcon(kind, selected) {
   const color = KIND_META[kind]?.color || '#666'
+  const sel = !!selected
+  // selected stops get a dark selection ring so they stand out for routing
+  const ring = sel ? `<circle cx="13" cy="13" r="12" fill="none" stroke="#111" stroke-width="2.5"/>` : ''
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="38" viewBox="0 0 26 38">` +
     `<path d="M13 0C5.8 0 0 5.8 0 13c0 9 13 25 13 25s13-16 13-25C26 5.8 20.2 0 13 0z" fill="${color}"/>` +
-    `<circle cx="13" cy="13" r="7.5" fill="#fff"/></svg>`
+    `<circle cx="13" cy="13" r="7.5" fill="#fff"/>${ring}</svg>`
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
     scaledSize: new google.maps.Size(26, 38),
@@ -445,11 +472,14 @@ function renderMarkers() {
   for (const id of Object.keys(markers)) delete markers[id]
   records.value.forEach((rec) => {
     if (!activeKinds.has(rec.kind) || rec.lat == null || rec.lng == null) return
+    const order = routeStops.value.indexOf(rec.id)
     const marker = new google.maps.Marker({
       map,
       position: { lat: rec.lat, lng: rec.lng },
       title: rec.label,
-      icon: pinIcon(rec.kind),
+      icon: pinIcon(rec.kind, order >= 0),
+      zIndex: order >= 0 ? 6000 : 100,
+      label: order >= 0 ? { text: String(order + 1), color: '#111', fontSize: '10px', fontWeight: '700' } : undefined,
     })
     marker.addListener('click', () => openInfo(rec, marker))
     markers[rec.id] = marker
@@ -470,8 +500,10 @@ function openInfo(rec, marker) {
     (rec.sublabel ? `<div style="font-size:12px;color:#666">${escapeHtml(rec.sublabel)}</div>` : '') +
     (rec.address ? `<div style="font-size:12px;color:#444;margin:4px 0">${escapeHtml(rec.address)}</div>` : '') +
     (rec.status ? `<div style="font-size:12px;color:#555">Status: <b>${escapeHtml(rec.status)}</b></div>` : '') +
+    `<div style="display:flex;gap:10px;align-items:center;margin-top:4px">` +
+    `<a href="#" id="crm-map-route" style="font-size:12px;font-weight:600;color:${inRoute(rec.id) ? '#E0533B' : '#3F51B5'}">${inRoute(rec.id) ? '− Remove from route' : '+ Add to route'}</a>` +
     (route ? `<a href="#" id="crm-map-open" style="font-size:12px;font-weight:600;color:#0B9E92">Open record →</a>` : '') +
-    `</div>`
+    `</div></div>`
   infoWindow.setContent(html)
   infoWindow.open(map, marker)
   google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
@@ -481,6 +513,8 @@ function openInfo(rec, marker) {
       if (isCrm) router.push(route)
       else window.open(route, '_blank')
     })
+    const rt = document.getElementById('crm-map-route')
+    if (rt) rt.addEventListener('click', (e) => { e.preventDefault(); toggleRoute(rec); infoWindow.close() })
   })
 }
 
@@ -494,6 +528,24 @@ function toggleKind(kind) {
   else activeKinds.add(kind)
   renderMarkers()
 }
+
+/* ── route stop selection ──────────────────────────────────────────────────── */
+function inRoute(id) { return routeStops.value.includes(id) }
+function toggleRoute(rec) {
+  if (rec.lat == null) { toast.warning(`${rec.label}: ${__('no map location yet')}`); return }
+  const i = routeStops.value.indexOf(rec.id)
+  if (i >= 0) routeStops.value.splice(i, 1)
+  else routeStops.value.push(rec.id)
+  renderMarkers()
+}
+function clearRoute() {
+  routeStops.value = []
+  if (dirRenderer) dirRenderer.set('directions', null)
+  renderMarkers()
+}
+const routeRecords = computed(() =>
+  routeStops.value.map((id) => records.value.find((r) => r.id === id)).filter(Boolean),
+)
 
 function focusRecord(rec) {
   const m = markers[rec.id]
@@ -511,15 +563,17 @@ function fitAll() {
   if (list.length === 1) map.setZoom(13)
 }
 
-/* Optimized travel route from home base through the visible customers. */
+/* Optimized travel route from home base through the SELECTED stops (or, if none
+ * are selected, all visible mapped records). Select one for a point-to-point route. */
 async function planRoute() {
   const home = settings.value?.home
   if (!home?.lat || !home?.lng) {
     toast.warning(__('Set a home base in CRM Settings → Map to plan a route'))
     return
   }
-  const stops = visibleRecords.value.filter((r) => r.lat != null).slice(0, 24)
-  if (stops.length < 1) { toast.warning(__('No mapped stops to route')); return }
+  const selected = routeRecords.value.filter((r) => r.lat != null)
+  const stops = (selected.length ? selected : visibleRecords.value.filter((r) => r.lat != null)).slice(0, 24)
+  if (stops.length < 1) { toast.warning(__('Select stops (pin → Add to route) or load mapped records')); return }
   routing.value = true
   try {
     const origin = { lat: home.lat, lng: home.lng }
