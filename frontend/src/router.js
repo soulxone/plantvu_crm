@@ -112,6 +112,11 @@ const routes = [
     component: () => import('@/pages/Forecast.vue'),
   },
   {
+    path: '/map',
+    name: 'Map',
+    component: () => import('@/pages/Map.vue'),
+  },
+  {
     path: '/sequences',
     name: 'Sequences',
     component: () => import('@/pages/Sequences.vue'),

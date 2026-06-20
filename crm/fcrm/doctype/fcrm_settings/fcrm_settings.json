@@ -25,7 +25,16 @@
   "brand_logo",
   "favicon",
   "dropdown_items_tab",
-  "dropdown_items"
+  "dropdown_items",
+  "maps_tab",
+  "google_maps_api_key",
+  "google_maps_map_id",
+  "map_home_section",
+  "map_home_address",
+  "map_home_latitude",
+  "map_home_longitude",
+  "map_rep_section",
+  "map_rep_config"
  ],
  "fields": [
   {
@@ -151,6 +160,58 @@
    "fieldname": "restore_demo_data",
    "fieldtype": "Button",
    "label": "Restore Demo Data"
+  },
+  {
+   "fieldname": "maps_tab",
+   "fieldtype": "Tab Break",
+   "label": "Map"
+  },
+  {
+   "description": "Google Maps API key used by the in-CRM map. MUST be HTTP-referrer restricted to your CRM domain(s) in Google Cloud, and limited to the Maps JavaScript / Places / Geocoding APIs.",
+   "fieldname": "google_maps_api_key",
+   "fieldtype": "Password",
+   "label": "Google Maps API Key"
+  },
+  {
+   "description": "Optional Google Maps Map ID (required for Advanced Markers / vector maps).",
+   "fieldname": "google_maps_map_id",
+   "fieldtype": "Data",
+   "label": "Google Maps Map ID"
+  },
+  {
+   "fieldname": "map_home_section",
+   "fieldtype": "Section Break",
+   "label": "Default Home Base"
+  },
+  {
+   "description": "Origin used for travel/route planning when a rep has no personal home base set.",
+   "fieldname": "map_home_address",
+   "fieldtype": "Data",
+   "label": "Home Address"
+  },
+  {
+   "fieldname": "map_home_latitude",
+   "fieldtype": "Float",
+   "label": "Home Latitude",
+   "precision": "8"
+  },
+  {
+   "fieldname": "map_home_longitude",
+   "fieldtype": "Float",
+   "label": "Home Longitude",
+   "precision": "8"
+  },
+  {
+   "fieldname": "map_rep_section",
+   "fieldtype": "Section Break",
+   "label": "Per-Rep Map Configuration"
+  },
+  {
+   "description": "Set each sales rep's home base so their travel map opens from the right origin.",
+   "fieldname": "map_rep_config",
+   "fieldtype": "Table",
+   "label": "Sales Rep Map Config",
+   "options": "CRM Map Rep"
   }
  ],
  "index_web_pages_for_search": 1,

@@ -84,6 +84,8 @@ import { ref, markRaw, computed, watch, h } from 'vue'
 import AssignmentRulePage from './AssignmentRules/AssignmentRulePage.vue'
 import ShieldCheck from '~icons/lucide/shield-check'
 import SlaConfig from './Sla/SlaConfig.vue'
+import MapSettings from '@/components/Settings/MapSettings.vue'
+import LucideMapPinned from '~icons/lucide/map-pinned'
 
 const { isManager, getUser } = usersStore()
 
@@ -228,6 +230,12 @@ const tabs = computed(() => {
           label: __('Lead Syncing'),
           icon: 'refresh-cw',
           component: markRaw(LeadSyncSourcePage),
+          condition: () => isManager(),
+        },
+        {
+          label: __('Map'),
+          icon: markRaw(h(LucideMapPinned)),
+          component: markRaw(MapSettings),
           condition: () => isManager(),
         },
       ],

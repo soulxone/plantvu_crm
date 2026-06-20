@@ -29,3 +29,4 @@ crm.patches.v1_0.add_sales_ai_custom_fields # plantvu sales ai
 crm.patches.v1_0.add_conversation_intelligence_custom_fields # plantvu conversation intelligence
 crm.patches.v1_0.add_forecast_fields # plantvu forecast
 crm.patches.v1_0.add_sequence_custom_fields # plantvu sequences
+crm.patches.v1_0.add_map_address_fields # plantvu crm map

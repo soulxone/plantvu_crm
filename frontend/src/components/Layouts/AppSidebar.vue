@@ -171,6 +171,7 @@ import { openSearchPalette } from '@/composables/useSearchPalette'
 import LucideLayoutDashboard from '~icons/lucide/layout-dashboard'
 import LucideTrendingUp from '~icons/lucide/trending-up'
 import LucideListChecks from '~icons/lucide/list-checks'
+import LucideMapPinned from '~icons/lucide/map-pinned'
 import CRMLogo from '@/components/Icons/CRMLogo.vue'
 import InviteIcon from '@/components/Icons/InviteIcon.vue'
 import ConvertIcon from '@/components/Icons/ConvertIcon.vue'
@@ -264,6 +265,11 @@ const links = [
     label: 'Organizations',
     icon: OrganizationsIcon,
     to: 'Organizations',
+  },
+  {
+    label: 'Map',
+    icon: LucideMapPinned,
+    to: 'Map',
   },
   {
     label: 'Notes',
