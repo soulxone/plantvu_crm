@@ -30,3 +30,4 @@ crm.patches.v1_0.add_conversation_intelligence_custom_fields # plantvu conversat
 crm.patches.v1_0.add_forecast_fields # plantvu forecast
 crm.patches.v1_0.add_sequence_custom_fields # plantvu sequences
 crm.patches.v1_0.add_map_address_fields # plantvu crm map
+crm.patches.v1_0.add_map_assignment_fields # plantvu crm map coverage

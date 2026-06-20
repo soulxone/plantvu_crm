@@ -451,6 +451,136 @@ def geocode_addresses(addresses, batch=25):
 	return {"resolved": resolved, "errors": errors}
 
 
+# ── plants & coverage (Phase 2a) ─────────────────────────────────────────────
+
+def _require_manager():
+	if not _is_manager():
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+
+def _haversine_mi(lat1, lng1, lat2, lng2):
+	import math
+	r = 3958.8  # earth radius in miles
+	dlat = math.radians(lat2 - lat1)
+	dlng = math.radians(lng2 - lng1)
+	a = (math.sin(dlat / 2) ** 2
+	     + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlng / 2) ** 2)
+	return r * 2 * math.asin(math.sqrt(a))
+
+
+@frappe.whitelist()
+def get_plants():
+	"""Active plants with coords, colour and coverage-radius bands."""
+	_require_crm_user()
+	if not frappe.db.exists("DocType", "CRM Plant"):
+		return []
+	rows = frappe.get_all(
+		"CRM Plant",
+		filters={"active": 1},
+		fields=["name", "plant_name", "company", "address_line1", "city", "state",
+		        "pincode", "country", "latitude", "longitude", "color",
+		        "radius_green_mi", "radius_yellow_mi", "radius_red_mi"],
+	)
+	for r in rows:
+		r["address"] = _addr_str({
+			"address_line1": r.get("address_line1"), "city": r.get("city"),
+			"state": r.get("state"), "pincode": r.get("pincode"), "country": r.get("country"),
+		})
+	return rows
+
+
+@frappe.whitelist()
+def save_plant(plant):
+	"""Create or update a plant (manager only)."""
+	_require_manager()
+	if isinstance(plant, str):
+		plant = json.loads(plant)
+	name = plant.get("name")
+	doc = frappe.get_doc("CRM Plant", name) if name and frappe.db.exists("CRM Plant", name) else frappe.new_doc("CRM Plant")
+	for f in ("plant_name", "company", "address_line1", "city", "state", "pincode",
+	          "country", "latitude", "longitude", "color",
+	          "radius_green_mi", "radius_yellow_mi", "radius_red_mi"):
+		if f in plant and plant.get(f) is not None:
+			doc.set(f, plant.get(f))
+	doc.active = 1
+	doc.save()
+	frappe.db.commit()
+	return {"name": doc.name}
+
+
+@frappe.whitelist()
+def delete_plant(name):
+	"""Soft-delete (deactivate) a plant (manager only)."""
+	_require_manager()
+	if frappe.db.exists("CRM Plant", name):
+		frappe.db.set_value("CRM Plant", name, "active", 0)
+		frappe.db.commit()
+	return {"ok": True}
+
+
+def _assignment_fields(doctype):
+	"""Custom assignment fields present on the doctype (added by patch)."""
+	meta = frappe.get_meta(doctype)
+	return {
+		"plant": "custom_map_plant" if _has(meta, "custom_map_plant") else None,
+		"zone": "custom_map_zone" if _has(meta, "custom_map_zone") else None,
+		"rep": "custom_map_rep" if _has(meta, "custom_map_rep") else None,
+	}
+
+
+@frappe.whitelist()
+def recompute_assignments():
+	"""Assign each addressed customer/lead to its nearest plant within coverage.
+
+	Phase 2a: nearest active plant whose RED radius covers the record. Writes the
+	persisted assignment fields. Records with no plant in range are flagged as
+	coverage gaps (cleared assignment). Zone (polygon) assignment lands in 2b.
+	"""
+	_require_manager()
+	plants = [p for p in get_plants() if p.get("latitude") and p.get("longitude")]
+	if not plants:
+		return {"error": "No plants with coordinates configured."}
+	cache = frappe.cache().get_value(GEO_CACHE_KEY) or {}
+
+	def nearest(lat, lng):
+		best, best_d = None, None
+		for p in plants:
+			d = _haversine_mi(lat, lng, p["latitude"], p["longitude"])
+			if best_d is None or d < best_d:
+				best, best_d = p, d
+		if best and best_d <= (best.get("radius_red_mi") or 150):
+			return best, round(best_d, 1)
+		return None, (round(best_d, 1) if best_d is not None else None)
+
+	# iterate customers + leads that have a cached geocode
+	assigned, gaps, scanned = 0, 0, 0
+	for kind, collector in (("Customer", _collect_customers), ("CRM Lead", _collect_leads)):
+		af = _assignment_fields(kind)
+		if not af["plant"]:
+			continue
+		for rec in collector(None, 10000):
+			addr = (rec.get("address") or "").strip()
+			coords = cache.get(addr)
+			if not coords:
+				continue
+			scanned += 1
+			plant, dist = nearest(coords["lat"], coords["lng"])
+			name = rec["ref"]["name"] if rec.get("ref") else rec["id"].split("::", 1)[-1]
+			vals = {}
+			if plant:
+				vals[af["plant"]] = plant["name"]
+				assigned += 1
+			else:
+				vals[af["plant"]] = ""
+				gaps += 1
+			try:
+				frappe.db.set_value(kind, name, vals, update_modified=False)
+			except Exception:
+				pass
+	frappe.db.commit()
+	return {"scanned": scanned, "assigned": assigned, "gaps": gaps, "plants": len(plants)}
+
+
 @frappe.whitelist()
 def get_rep_configs():
 	"""Admin: per-rep map config rows (home base etc.) from FCRM Settings."""

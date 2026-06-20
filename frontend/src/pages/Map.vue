@@ -20,6 +20,9 @@
           <option value="__me__">{{ __('My records') }}</option>
           <option v-for="r in settings.reps" :key="r.id" :value="r.id">{{ r.name }}</option>
         </select>
+        <Button v-if="settings?.is_manager" :label="__('Coverage')" :loading="recomputing" @click="recomputeCoverage">
+          <template #prefix><LucideTarget class="h-4 w-4" /></template>
+        </Button>
         <Button :label="__('Plan route')" :loading="routing" @click="planRoute">
           <template #prefix><LucideRoute class="h-4 w-4" /></template>
         </Button>
@@ -62,6 +65,21 @@
               {{ counts[kind] || 0 }}
             </span>
           </label>
+
+          <!-- plants + coverage -->
+          <div class="mt-2 border-t border-outline-gray-1 pt-2">
+            <label class="flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-gray-7">
+              <input type="checkbox" v-model="showPlants" @change="renderPlants" />
+              <span class="inline-block h-3 w-3 rounded-sm" style="background:#0B9E92" />
+              {{ __('Plants') }}
+              <span class="ml-auto rounded-full bg-surface-gray-2 px-2 text-xs text-ink-gray-6">{{ plants.length }}</span>
+            </label>
+            <label class="flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-gray-7">
+              <input type="checkbox" v-model="showCoverage" @change="renderPlants" />
+              <span class="inline-block h-3 w-3 rounded-full border border-dashed" style="border-color:#1FA85A" />
+              {{ __('Coverage rings') }}
+            </label>
+          </div>
         </div>
 
         <!-- stats -->
@@ -125,6 +143,7 @@ import LucideRefreshCcw from '~icons/lucide/refresh-ccw'
 import LucideMaximize from '~icons/lucide/maximize'
 import LucideRoute from '~icons/lucide/route'
 import LucideHelpCircle from '~icons/lucide/help-circle'
+import LucideTarget from '~icons/lucide/target'
 
 const router = useRouter()
 
@@ -148,6 +167,10 @@ const keyMissing = ref(false)
 const repFilter = ref('')
 const activeKinds = reactive(new Set(['lead', 'customer', 'organization', 'deal']))
 const counts = reactive({})
+const plants = ref([])
+const showPlants = ref(true)
+const showCoverage = ref(true)
+const recomputing = ref(false)
 
 let map = null
 let infoWindow = null
@@ -156,6 +179,7 @@ let dirRenderer = null
 let geocoder = null
 let homeMarker = null
 const markers = {} // id -> google.maps.Marker
+let plantOverlays = [] // markers + circles for plants/coverage
 
 const mappedCount = computed(() => records.value.filter((r) => r.lat != null).length)
 
@@ -189,6 +213,7 @@ onMounted(async () => {
   try {
     await loadGoogle(settings.value.api_key)
     initMap()
+    loadPlants()
     await loadRecords()
   } catch (e) {
     toast.error(__('Failed to load Google Maps'))
@@ -238,6 +263,77 @@ function initMap() {
     })
   }
   setupSearch()
+}
+
+/* ── plants & radius coverage (Phase 2a) ───────────────────────────────────── */
+const MI_TO_M = 1609.34
+async function loadPlants() {
+  try {
+    plants.value = await call('crm.api.maps.get_plants')
+    renderPlants()
+  } catch (e) { /* plants optional */ }
+}
+
+function clearPlants() {
+  plantOverlays.forEach((o) => o.setMap(null))
+  plantOverlays = []
+}
+
+function renderPlants() {
+  clearPlants()
+  if (!showPlants.value) return
+  plants.value.forEach((p) => {
+    if (p.latitude == null || p.longitude == null) return
+    const center = { lat: p.latitude, lng: p.longitude }
+    if (showCoverage.value) {
+      const bands = [
+        { mi: p.radius_red_mi, c: '#E0533B' },
+        { mi: p.radius_yellow_mi, c: '#F0A000' },
+        { mi: p.radius_green_mi, c: '#1FA85A' },
+      ]
+      bands.forEach((b) => {
+        if (!b.mi) return
+        const circle = new google.maps.Circle({
+          map, center, radius: b.mi * MI_TO_M,
+          strokeColor: b.c, strokeOpacity: 0.5, strokeWeight: 1,
+          fillColor: b.c, fillOpacity: 0.05, clickable: false, zIndex: 1,
+        })
+        plantOverlays.push(circle)
+      })
+    }
+    const marker = new google.maps.Marker({
+      map, position: center, title: `${p.plant_name} (plant)`,
+      zIndex: 8000,
+      icon: {
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+          `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"><rect x="3" y="3" width="16" height="16" rx="3" fill="${p.color || '#0B9E92'}" stroke="#fff" stroke-width="2"/></svg>`),
+        scaledSize: new google.maps.Size(22, 22),
+        anchor: new google.maps.Point(11, 11),
+      },
+    })
+    marker.addListener('click', () => {
+      infoWindow.setContent(
+        `<div style="min-width:170px"><strong>${escapeHtml(p.plant_name)}</strong>` +
+        (p.company ? `<div style="font-size:12px;color:#666">${escapeHtml(p.company)}</div>` : '') +
+        (p.address ? `<div style="font-size:12px;color:#444;margin:4px 0">${escapeHtml(p.address)}</div>` : '') +
+        `<div style="font-size:12px;color:#555">Coverage: ${p.radius_green_mi||0}/${p.radius_yellow_mi||0}/${p.radius_red_mi||0} mi</div></div>`)
+      infoWindow.open(map, marker)
+    })
+    plantOverlays.push(marker)
+  })
+}
+
+async function recomputeCoverage() {
+  recomputing.value = true
+  try {
+    const r = await call('crm.api.maps.recompute_assignments')
+    if (r.error) toast.warning(r.error)
+    else toast.success(`${__('Coverage')}: ${r.assigned} ${__('assigned')}, ${r.gaps} ${__('gaps')} (${r.plants} ${__('plants')})`)
+  } catch (e) {
+    toast.error(e?.messages?.[0] || __('Recompute failed'))
+  } finally {
+    recomputing.value = false
+  }
 }
 
 function setupSearch() {
