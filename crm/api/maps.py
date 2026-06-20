@@ -328,8 +328,42 @@ def get_map_records(rep=None, kinds=None):
 
 
 @frappe.whitelist()
+def save_geocodes(resolved):
+	"""Persist browser-resolved coordinates to the shared cache (no Google call).
+
+	The SPA geocodes in the browser under the referrer-restricted key, then posts
+	``{address: {lat, lng}}`` here so coords survive reloads and are shared across
+	users. This makes a single, fully-restricted key sufficient (no server key).
+	"""
+	_require_crm_user()
+	if isinstance(resolved, str):
+		try:
+			resolved = json.loads(resolved)
+		except Exception:
+			return {"saved": 0}
+	if not isinstance(resolved, dict):
+		return {"saved": 0}
+	cache = frappe.cache().get_value(GEO_CACHE_KEY) or {}
+	saved = 0
+	for addr, coords in resolved.items():
+		a = (addr or "").strip()
+		if not a or not isinstance(coords, dict):
+			continue
+		lat, lng = coords.get("lat"), coords.get("lng")
+		if lat is None or lng is None:
+			continue
+		cache[a] = {"lat": flt(lat), "lng": flt(lng)}
+		saved += 1
+	frappe.cache().set_value(GEO_CACHE_KEY, cache, expires_in_sec=86400 * 30)
+	return {"saved": saved}
+
+
+@frappe.whitelist()
 def geocode_addresses(addresses, batch=25):
-	"""Server-side batch geocode via the configured key; persists to cache."""
+	"""DEPRECATED server-side geocode (fails under a referrer-restricted key).
+
+	Kept as a fallback for unrestricted keys / admin tooling. The SPA now geocodes
+	client-side and persists via ``save_geocodes``."""
 	_require_crm_user()
 	if isinstance(addresses, str):
 		try:

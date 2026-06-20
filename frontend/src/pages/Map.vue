@@ -152,6 +152,7 @@ let map = null
 let infoWindow = null
 let dirService = null
 let dirRenderer = null
+let geocoder = null
 let homeMarker = null
 const markers = {} // id -> google.maps.Marker
 
@@ -221,6 +222,7 @@ function initMap() {
     styles: [{ featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] }],
   })
   infoWindow = new google.maps.InfoWindow()
+  geocoder = new google.maps.Geocoder()
   dirService = new google.maps.DirectionsService()
   dirRenderer = new google.maps.DirectionsRenderer({ suppressMarkers: true, map })
   mapReady.value = true
@@ -277,29 +279,54 @@ function updateCounts() {
   records.value.forEach((r) => { counts[r.kind] = (counts[r.kind] || 0) + 1 })
 }
 
+// Geocode in the BROWSER (runs under the referrer-restricted key), then persist
+// the results so a single, fully-locked-down key covers everything.
 async function geocodeLoop() {
-  const pending = records.value
-    .filter((r) => !r._geo && (r.address || '').trim() && r.lat == null)
-    .map((r) => r.address.trim())
-  const unique = [...new Set(pending)].slice(0, 25)
-  if (!unique.length) { geocoding.value = false; fitAll(); return }
+  const pending = records.value.filter(
+    (r) => !r._geo && (r.address || '').trim() && r.lat == null,
+  )
+  if (!pending.length) { geocoding.value = false; fitAll(); return }
   geocoding.value = true
-  try {
-    const r = await call('crm.api.maps.geocode_addresses', { addresses: JSON.stringify(unique), batch: 25 })
-    const resolved = r.resolved || {}
-    let any = false
-    records.value.forEach((rec) => {
-      const c = resolved[(rec.address || '').trim()]
-      if (c) { rec.lat = c.lat; rec.lng = c.lng; rec._geo = true; any = true }
-      else if (unique.includes((rec.address || '').trim())) rec._geo = true
-    })
-    if (any) renderMarkers()
-    const stillPending = records.value.some((rec) => !rec._geo && (rec.address || '').trim() && rec.lat == null)
-    if (stillPending) setTimeout(geocodeLoop, 250)
-    else { geocoding.value = false; fitAll() }
-  } catch (e) {
-    geocoding.value = false
+  const batch = pending.slice(0, 12)
+  const resolved = {}
+  for (const rec of batch) {
+    const addr = rec.address.trim()
+    rec._geo = true
+    if (resolved[addr]) { applyCoords(addr, resolved[addr]); continue }
+    const c = await geocodeOne(addr)
+    if (c) { resolved[addr] = c; applyCoords(addr, c) }
   }
+  renderMarkers()
+  const found = Object.keys(resolved).length
+  if (found) {
+    call('crm.api.maps.save_geocodes', { resolved: JSON.stringify(resolved) }).catch(() => {})
+  }
+  const stillPending = records.value.some(
+    (r) => !r._geo && (r.address || '').trim() && r.lat == null,
+  )
+  if (stillPending) setTimeout(geocodeLoop, 150)
+  else { geocoding.value = false; fitAll() }
+}
+
+function applyCoords(addr, c) {
+  records.value.forEach((r) => {
+    if ((r.address || '').trim() === addr) { r.lat = c.lat; r.lng = c.lng; r._geo = true }
+  })
+}
+
+function geocodeOne(addr, tries = 0) {
+  return new Promise((resolve) => {
+    geocoder.geocode({ address: addr }, (results, status) => {
+      if (status === 'OK' && results && results[0]) {
+        const loc = results[0].geometry.location
+        resolve({ lat: loc.lat(), lng: loc.lng() })
+      } else if (status === 'OVER_QUERY_LIMIT' && tries < 3) {
+        setTimeout(() => geocodeOne(addr, tries + 1).then(resolve), 500 * (tries + 1))
+      } else {
+        resolve(null)
+      }
+    })
+  })
 }
 
 /* ── markers ───────────────────────────────────────────────────────────── */

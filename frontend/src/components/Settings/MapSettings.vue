@@ -110,11 +110,12 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { FormControl, Button, call, toast } from 'frappe-ui'
+import { FormControl, Button, toast } from 'frappe-ui'
 import LucidePlus from '~icons/lucide/plus'
 import LucideTrash2 from '~icons/lucide/trash-2'
 import { getSettings } from '@/stores/settings'
 import { showSettings } from '@/composables/settings'
+import { geocodeAddress } from '@/composables/googleMaps'
 
 const { _settings: settings } = getSettings()
 const geocoding = ref(false)
@@ -131,27 +132,19 @@ function removeRep(i) {
   repRows.value.splice(i, 1)
 }
 
-async function geocodeOne(address) {
-  const r = await call('crm.api.maps.geocode_addresses', {
-    addresses: JSON.stringify([address]),
-    batch: 1,
-  })
-  return (r.resolved || {})[address.trim()]
-}
-
 async function geocodeHome() {
   const addr = settings.doc.map_home_address
   if (!addr) return toast.warning(__('Enter an address first'))
   geocoding.value = true
   try {
-    const c = await geocodeOne(addr)
+    const c = await geocodeAddress(addr)
     if (c) {
       settings.doc.map_home_latitude = c.lat
       settings.doc.map_home_longitude = c.lng
       toast.success(__('Geocoded'))
     } else toast.error(__('Address not found'))
   } catch (e) {
-    toast.error(e?.messages?.[0] || __('Geocode failed'))
+    toast.error(e?.message === 'no-google-maps-key' ? __('Set the API key first') : __('Geocode failed'))
   } finally {
     geocoding.value = false
   }
@@ -161,11 +154,11 @@ async function geocodeRow(row) {
   if (!row.home_address) return toast.warning(__('Enter an address first'))
   row._geocoding = true
   try {
-    const c = await geocodeOne(row.home_address)
+    const c = await geocodeAddress(row.home_address)
     if (c) { row.home_latitude = c.lat; row.home_longitude = c.lng }
     else toast.error(__('Address not found'))
   } catch (e) {
-    toast.error(__('Geocode failed'))
+    toast.error(e?.message === 'no-google-maps-key' ? __('Set the API key first') : __('Geocode failed'))
   } finally {
     row._geocoding = false
   }
