@@ -325,15 +325,17 @@ function renderPlants() {
         plantOverlays.push(circle)
       })
     }
+    const icon = p.logo
+      ? { url: p.logo, scaledSize: new google.maps.Size(52, 30), anchor: new google.maps.Point(26, 15) }
+      : {
+          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+            `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"><rect x="3" y="3" width="16" height="16" rx="3" fill="${p.color || '#0B9E92'}" stroke="#fff" stroke-width="2"/></svg>`),
+          scaledSize: new google.maps.Size(22, 22),
+          anchor: new google.maps.Point(11, 11),
+        }
     const marker = new google.maps.Marker({
       map, position: center, title: `${p.plant_name} (plant)`,
-      zIndex: 8000,
-      icon: {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
-          `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"><rect x="3" y="3" width="16" height="16" rx="3" fill="${p.color || '#0B9E92'}" stroke="#fff" stroke-width="2"/></svg>`),
-        scaledSize: new google.maps.Size(22, 22),
-        anchor: new google.maps.Point(11, 11),
-      },
+      zIndex: 8000, icon,
     })
     marker.addListener('click', () => {
       infoWindow.setContent(

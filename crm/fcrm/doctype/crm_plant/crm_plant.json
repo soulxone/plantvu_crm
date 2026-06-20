@@ -20,6 +20,7 @@
   "longitude",
   "map_section",
   "color",
+  "logo",
   "radius_green_mi",
   "radius_yellow_mi",
   "radius_red_mi"
@@ -39,6 +40,7 @@
   {"fieldname": "longitude", "fieldtype": "Float", "label": "Longitude", "precision": "8"},
   {"fieldname": "map_section", "fieldtype": "Section Break", "label": "Map & Coverage"},
   {"fieldname": "color", "fieldtype": "Data", "label": "Pin Color", "default": "#0B9E92"},
+  {"fieldname": "logo", "fieldtype": "Attach Image", "label": "Pin Logo", "description": "Optional logo shown as the map pin instead of the colored marker."},
   {"fieldname": "radius_green_mi", "fieldtype": "Float", "label": "Coverage — Green (mi)", "default": "50"},
   {"fieldname": "radius_yellow_mi", "fieldtype": "Float", "label": "Coverage — Yellow (mi)", "default": "100"},
   {"fieldname": "radius_red_mi", "fieldtype": "Float", "label": "Coverage — Red (mi)", "default": "150"}

@@ -18,6 +18,7 @@ class CRMPlant(Document):
 		company: DF.Link | None
 		country: DF.Data | None
 		latitude: DF.Float
+		logo: DF.AttachImage | None
 		longitude: DF.Float
 		pincode: DF.Data | None
 		plant_name: DF.Data

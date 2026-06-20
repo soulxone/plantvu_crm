@@ -478,7 +478,7 @@ def get_plants():
 		"CRM Plant",
 		filters={"active": 1},
 		fields=["name", "plant_name", "company", "address_line1", "city", "state",
-		        "pincode", "country", "latitude", "longitude", "color",
+		        "pincode", "country", "latitude", "longitude", "color", "logo",
 		        "radius_green_mi", "radius_yellow_mi", "radius_red_mi"],
 	)
 	for r in rows:
@@ -498,7 +498,7 @@ def save_plant(plant):
 	name = plant.get("name")
 	doc = frappe.get_doc("CRM Plant", name) if name and frappe.db.exists("CRM Plant", name) else frappe.new_doc("CRM Plant")
 	for f in ("plant_name", "company", "address_line1", "city", "state", "pincode",
-	          "country", "latitude", "longitude", "color",
+	          "country", "latitude", "longitude", "color", "logo",
 	          "radius_green_mi", "radius_yellow_mi", "radius_red_mi"):
 		if f in plant and plant.get(f) is not None:
 			doc.set(f, plant.get(f))
