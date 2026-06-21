@@ -148,7 +148,10 @@ def _write_back(doctype, name, data):
 	vals = {}
 	for field, src in _WRITEBACK.items():
 		if maps._has(meta, field) and data.get(src) is not None:
-			vals[field] = data.get(src)
+			v = data.get(src)
+			if isinstance(v, str) and len(v) > 140:
+				v = v[:140]
+			vals[field] = v
 	if maps._has(meta, "custom_geo_enriched"):
 		vals["custom_geo_enriched"] = now_datetime()
 	if vals:

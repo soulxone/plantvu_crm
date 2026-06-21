@@ -14,13 +14,13 @@ class CRMGeoEnrichment(Document):
 		business_name: DF.Data | None
 		category: DF.Data | None
 		formatted_address: DF.SmallText | None
-		gmaps_url: DF.Data | None
+		gmaps_url: DF.SmallText | None
 		hours: DF.SmallText | None
 		last_enriched: DF.Datetime | None
 		latitude: DF.Float
 		longitude: DF.Float
 		phone: DF.Data | None
-		photo_url: DF.Data | None
+		photo_url: DF.SmallText | None
 		place_id: DF.Data | None
 		products: DF.SmallText | None
 		rating: DF.Float
