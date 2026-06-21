@@ -602,7 +602,9 @@ function renderPlants() {
     })
     marker.addListener('click', () => {
       infoWindow.setContent(
-        `<div style="min-width:180px"><strong>${escapeHtml(p.plant_name)}</strong>` +
+        `<div style="min-width:180px">` +
+        (p.logo ? `<img src="${escapeHtml(p.logo)}" alt="" style="height:30px;max-width:150px;object-fit:contain;display:block;margin:0 0 6px" />` : '') +
+        `<strong>${escapeHtml(p.plant_name)}</strong>` +
         (p.company ? `<div style="font-size:12px;color:#666">${escapeHtml(p.company)}</div>` : '') +
         (p.address ? `<div style="font-size:12px;color:#444;margin:4px 0">${escapeHtml(p.address)}</div>` : '') +
         `<div style="font-size:12px;color:#555">Coverage: ${p.radius_green_mi||0}/${p.radius_yellow_mi||0}/${p.radius_red_mi||0} mi</div>` +
