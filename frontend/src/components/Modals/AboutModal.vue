@@ -6,6 +6,7 @@
           <div class="flex flex-col items-center">
             <CRMLogo class="mb-3 size-12" />
             <h3 class="font-semibold text-xl text-ink-gray-9">Plantvu CRM</h3>
+            <p class="text-xs text-ink-gray-5 mt-1">{{ __('Built on Frappe CRM · AGPL-3.0') }}</p>
           </div>
         </div>
         <hr class="border-t my-3 mx-2" />
@@ -52,8 +53,13 @@ let links = [
     icon: LucideGlobe,
   },
   {
-    label: __('GitHub Repository'),
+    label: __('Frappe CRM (upstream)'),
     url: 'https://github.com/frappe/crm',
+    icon: LucideGitHub,
+  },
+  {
+    label: __('Source (AGPL-3.0)'),
+    url: 'https://github.com/soulxone/plantvu_crm',
     icon: LucideGitHub,
   },
   {
