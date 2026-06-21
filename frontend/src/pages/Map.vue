@@ -68,17 +68,41 @@
 
           <!-- plants + coverage -->
           <div class="mt-2 border-t border-outline-gray-1 pt-2">
-            <label class="flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-gray-7">
+            <div class="flex items-center gap-2 py-1 text-sm text-ink-gray-7">
               <input type="checkbox" v-model="showPlants" @change="renderPlants" />
               <span class="inline-block h-3 w-3 rounded-sm" style="background:#0B9E92" />
               {{ __('Plants') }}
-              <span class="ml-auto rounded-full bg-surface-gray-2 px-2 text-xs text-ink-gray-6">{{ plants.length }}</span>
-            </label>
+              <span class="rounded-full bg-surface-gray-2 px-2 text-xs text-ink-gray-6">{{ plants.length }}</span>
+              <button
+                v-if="plants.length"
+                class="ml-auto text-xs text-ink-blue-3 hover:underline"
+                @click="showPlantList = !showPlantList"
+              >{{ showPlantList ? __('hide') : __('select') }}</button>
+            </div>
             <label class="flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-gray-7">
               <input type="checkbox" v-model="showCoverage" @change="renderPlants" />
               <span class="inline-block h-3 w-3 rounded-full border border-dashed" style="border-color:#1FA85A" />
               {{ __('Coverage rings') }}
             </label>
+
+            <!-- per-plant show/hide (like the customer list) -->
+            <div v-if="showPlantList" class="mt-1 max-h-44 overflow-y-auto rounded border border-outline-gray-1">
+              <div class="flex items-center gap-2 border-b border-outline-gray-1 px-2 py-1 text-xs text-ink-gray-5">
+                <button class="hover:underline" @click="setAllPlants(true)">{{ __('All') }}</button>
+                <span>·</span>
+                <button class="hover:underline" @click="setAllPlants(false)">{{ __('None') }}</button>
+              </div>
+              <label
+                v-for="p in plants"
+                :key="p.name"
+                class="flex cursor-pointer items-center gap-2 px-2 py-1 text-xs text-ink-gray-7 hover:bg-surface-gray-1"
+              >
+                <input type="checkbox" :checked="plantShown(p)" @change="togglePlant(p)" />
+                <img v-if="p.logo" :src="p.logo" class="h-3 w-auto max-w-6 object-contain" />
+                <span v-else class="h-2.5 w-2.5 rounded-sm" :style="{ background: p.color || '#0B9E92' }" />
+                <span class="truncate">{{ p.plant_name }}</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -194,6 +218,8 @@ const plants = ref([])
 const showPlants = ref(true)
 const showCoverage = ref(true)
 const recomputing = ref(false)
+const hiddenPlants = reactive(new Set()) // plant names toggled off
+const showPlantList = ref(false)
 const routeStops = ref([]) // selected record ids, in pick order
 
 let map = null
@@ -308,6 +334,7 @@ function renderPlants() {
   if (!showPlants.value) return
   plants.value.forEach((p) => {
     if (p.latitude == null || p.longitude == null) return
+    if (hiddenPlants.has(p.name)) return
     const center = { lat: p.latitude, lng: p.longitude }
     if (showCoverage.value) {
       const bands = [
@@ -347,6 +374,18 @@ function renderPlants() {
     })
     plantOverlays.push(marker)
   })
+}
+
+function plantShown(p) { return !hiddenPlants.has(p.name) }
+function togglePlant(p) {
+  if (hiddenPlants.has(p.name)) hiddenPlants.delete(p.name)
+  else hiddenPlants.add(p.name)
+  renderPlants()
+}
+function setAllPlants(show) {
+  hiddenPlants.clear()
+  if (!show) plants.value.forEach((p) => hiddenPlants.add(p.name))
+  renderPlants()
 }
 
 async function recomputeCoverage() {
