@@ -88,11 +88,28 @@
                 @click="showPlantList = !showPlantList"
               >{{ showPlantList ? __('hide') : __('select') }}</button>
             </div>
-            <label class="flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-gray-7">
+            <div class="flex items-center gap-2 py-1 text-sm text-ink-gray-7">
               <input type="checkbox" v-model="showCoverage" @change="renderPlants" />
               <span class="inline-block h-3 w-3 rounded-full border border-dashed" style="border-color:#1FA85A" />
               {{ __('Coverage rings') }}
-            </label>
+              <button class="ml-auto text-xs text-ink-blue-3 hover:underline" @click="showRingList = !showRingList">
+                {{ showRingList ? __('hide') : __('select') }}
+              </button>
+            </div>
+            <div v-if="showRingList" class="mb-1 ml-5 flex flex-col gap-1 border-l border-outline-gray-1 pl-2">
+              <label v-for="b in ringBands" :key="b.mi" class="flex cursor-pointer items-center gap-2 text-xs text-ink-gray-7">
+                <input type="checkbox" v-model="b.on" :disabled="!showCoverage" @change="renderPlants" />
+                <span class="inline-block h-2.5 w-2.5 rounded-full border" :style="{ borderColor: b.color }" />
+                {{ b.mi }} {{ __('mi') }}
+              </label>
+              <label class="flex cursor-pointer items-center gap-2 text-xs text-ink-gray-7">
+                <input type="checkbox" v-model="customRing.on" :disabled="!showCoverage" @change="renderPlants" />
+                <span class="inline-block h-2.5 w-2.5 rounded-full border" :style="{ borderColor: customRing.color }" />
+                {{ __('Custom') }}
+                <input type="number" min="1" v-model.number="customRing.mi" :disabled="!showCoverage" class="form-input h-6 w-16 text-xs" @change="renderPlants" />
+                {{ __('mi') }}
+              </label>
+            </div>
             <label class="flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-gray-7">
               <input type="checkbox" v-model="showZones" @change="renderZones" />
               <span class="inline-block h-3 w-3 rounded-sm" style="background:#3F51B5;opacity:0.4" />
@@ -265,6 +282,15 @@ const counts = reactive({})
 const plants = ref([])
 const showPlants = ref(true)
 const showCoverage = ref(true)
+const showRingList = ref(false)
+// selectable coverage-ring distances (miles) — toggle each on/off at will
+const ringBands = reactive([
+  { mi: 25, on: false, color: '#0B9E92' },
+  { mi: 50, on: true, color: '#1FA85A' },
+  { mi: 100, on: true, color: '#F0A000' },
+  { mi: 150, on: true, color: '#E0533B' },
+])
+const customRing = reactive({ mi: 200, on: false, color: '#3F51B5' })
 const recomputing = ref(false)
 const hiddenPlants = reactive(new Set()) // plant names toggled off
 const showPlantList = ref(false)
@@ -387,6 +413,13 @@ function clearPlants() {
   plantOverlays = []
 }
 
+// the enabled ring distances, largest first so smaller rings layer on top
+function activeRingBands() {
+  const out = ringBands.filter((b) => b.on && b.mi > 0).map((b) => ({ mi: b.mi, color: b.color }))
+  if (customRing.on && customRing.mi > 0) out.push({ mi: customRing.mi, color: customRing.color })
+  return out.sort((a, b) => b.mi - a.mi)
+}
+
 function renderPlants() {
   clearPlants()
   if (!showPlants.value) return
@@ -395,17 +428,13 @@ function renderPlants() {
     if (hiddenPlants.has(p.name)) return
     const center = { lat: p.latitude, lng: p.longitude }
     if (showCoverage.value) {
-      const bands = [
-        { mi: p.radius_red_mi, c: '#E0533B' },
-        { mi: p.radius_yellow_mi, c: '#F0A000' },
-        { mi: p.radius_green_mi, c: '#1FA85A' },
-      ]
+      // draw the user-selected ring distances (largest first so smaller sit on top)
+      const bands = activeRingBands()
       bands.forEach((b) => {
-        if (!b.mi) return
         const circle = new google.maps.Circle({
           map, center, radius: b.mi * MI_TO_M,
-          strokeColor: b.c, strokeOpacity: 0.5, strokeWeight: 1,
-          fillColor: b.c, fillOpacity: 0.05, clickable: false, zIndex: 1,
+          strokeColor: b.color, strokeOpacity: 0.55, strokeWeight: 1,
+          fillColor: b.color, fillOpacity: 0.05, clickable: false, zIndex: 1,
         })
         plantOverlays.push(circle)
       })
