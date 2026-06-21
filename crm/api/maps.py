@@ -46,12 +46,9 @@ def _settings():
 
 
 def _api_key():
-	s = _settings()
-	# Password fieldtype — read decrypted via get_password
-	try:
-		return s.get_password("google_maps_api_key", raise_exception=False) or ""
-	except Exception:
-		return getattr(s, "google_maps_api_key", "") or ""
+	# Data fieldtype (plain) — not a secret (referrer-restricted, client-exposed),
+	# and storing plain avoids broken-encryption decrypt failures on some sites.
+	return getattr(_settings(), "google_maps_api_key", "") or ""
 
 
 # ── geocoding ───────────────────────────────────────────────────────────────

@@ -167,9 +167,9 @@
    "label": "Map"
   },
   {
-   "description": "Google Maps API key used by the in-CRM map. MUST be HTTP-referrer restricted to your CRM domain(s) in Google Cloud, and limited to the Maps JavaScript / Places / Geocoding APIs.",
+   "description": "Google Maps API key used by the in-CRM map. MUST be HTTP-referrer restricted to your CRM domain(s) in Google Cloud, and limited to the Maps JavaScript / Places / Geocoding APIs. (Stored as plain Data: it is referrer-restricted and exposed client-side, so it is not a secret — and this avoids decryption issues.)",
    "fieldname": "google_maps_api_key",
-   "fieldtype": "Password",
+   "fieldtype": "Data",
    "label": "Google Maps API Key"
   },
   {
