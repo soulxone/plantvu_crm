@@ -673,9 +673,10 @@ function openInfo(rec, marker) {
     (rec.sublabel ? `<div style="font-size:12px;color:#666">${escapeHtml(rec.sublabel)}</div>` : '') +
     (rec.address ? `<div style="font-size:12px;color:#444;margin:4px 0">${escapeHtml(rec.address)}</div>` : '') +
     (rec.status ? `<div style="font-size:12px;color:#555">Status: <b>${escapeHtml(rec.status)}</b></div>` : '') +
-    `<div style="display:flex;gap:10px;align-items:center;margin-top:4px">` +
+    `<div style="display:flex;gap:10px;align-items:center;margin-top:4px;flex-wrap:wrap">` +
     `<a href="#" id="crm-map-route" style="font-size:12px;font-weight:600;color:${inRoute(rec.id) ? '#E0533B' : '#3F51B5'}">${inRoute(rec.id) ? '− Remove from route' : '+ Add to route'}</a>` +
     (route ? `<a href="#" id="crm-map-open" style="font-size:12px;font-weight:600;color:#0B9E92">Open record →</a>` : '') +
+    (canEnrich(rec) ? `<a href="#" id="crm-map-enrich" style="font-size:12px;font-weight:600;color:#7C4DFF">✨ Enrich</a>` : '') +
     `</div></div>`
   infoWindow.setContent(html)
   infoWindow.open(map, marker)
@@ -688,7 +689,28 @@ function openInfo(rec, marker) {
     })
     const rt = document.getElementById('crm-map-route')
     if (rt) rt.addEventListener('click', (e) => { e.preventDefault(); toggleRoute(rec); infoWindow.close() })
+    const en = document.getElementById('crm-map-enrich')
+    if (en) en.addEventListener('click', (e) => { e.preventDefault(); enrichRecord(rec) })
   })
+}
+
+function canEnrich(rec) {
+  return settings.value?.is_manager && ['customer', 'lead', 'organization'].includes(rec.kind) && rec.ref?.name
+}
+
+async function enrichRecord(rec) {
+  toast.info(`${__('Enriching')} ${rec.label}…`)
+  try {
+    const r = await call('crm.api.enrichment.enrich_record', {
+      reference_doctype: rec.ref.doctype, reference_name: rec.ref.name,
+    })
+    if (r.error) return toast.warning(r.error)
+    if (!r.found) return toast.warning(`${rec.label}: ${__('no Google listing found')}`)
+    const d = r.data || {}
+    toast.success(`${d.business_name || rec.label}: ${[d.phone, d.category, d.rating && d.rating + '★'].filter(Boolean).join(' · ') || __('enriched')}`)
+  } catch (e) {
+    toast.error(e?.messages?.[0] || __('Enrich failed (set the server key in Settings → Map)'))
+  }
 }
 
 function escapeHtml(s) {

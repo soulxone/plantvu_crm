@@ -52,6 +52,29 @@
       </div>
       <div class="h-px border-t border-outline-gray-modals" />
 
+      <!-- Geo enrichment keys -->
+      <div class="flex flex-col gap-3">
+        <div class="flex flex-col">
+          <div class="text-p-base font-medium text-ink-gray-7">{{ __('Geo Enrichment') }}</div>
+          <div class="max-w-lg text-p-sm text-ink-gray-5">
+            {{ __('Pulls default Google Maps (Places) info + a website summary into each addressed Lead/Customer. The server key is used for background calls and must NOT be referrer-restricted — restrict it by IP or API instead.') }}
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-8">
+          <div class="text-p-base text-ink-gray-7">{{ __('Google Maps Server Key') }}</div>
+          <FormControl v-model="settings.doc.google_maps_server_key" type="text" size="md" class="w-72" :placeholder="__('AIza… (IP/API-restricted)')" />
+        </div>
+        <div class="flex items-center justify-between gap-8">
+          <div class="text-p-base text-ink-gray-7">{{ __('Firecrawl API Key (optional)') }}</div>
+          <FormControl v-model="settings.doc.crm_firecrawl_api_key" type="text" size="md" class="w-72" :placeholder="__('fc-…')" />
+        </div>
+        <label class="flex cursor-pointer items-center gap-2 text-p-base text-ink-gray-7">
+          <input type="checkbox" v-model="settings.doc.enable_geo_enrichment_schedule" :true-value="1" :false-value="0" />
+          {{ __('Run nightly enrichment refresh (records older than 30 days)') }}
+        </label>
+      </div>
+      <div class="h-px border-t border-outline-gray-modals" />
+
       <!-- Plants -->
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between">

@@ -29,6 +29,10 @@
   "maps_tab",
   "google_maps_api_key",
   "google_maps_map_id",
+  "enrichment_section",
+  "google_maps_server_key",
+  "crm_firecrawl_api_key",
+  "enable_geo_enrichment_schedule",
   "map_home_section",
   "map_home_address",
   "map_home_latitude",
@@ -177,6 +181,30 @@
    "fieldname": "google_maps_map_id",
    "fieldtype": "Data",
    "label": "Google Maps Map ID"
+  },
+  {
+   "fieldname": "enrichment_section",
+   "fieldtype": "Section Break",
+   "label": "Geo Enrichment (Places + Firecrawl)"
+  },
+  {
+   "description": "Server key for background Places/Geocoding enrichment. Unlike the browser key above, this one must NOT be referrer-restricted (server calls send no referer) — restrict it by IP (Frappe Cloud egress) or leave application-unrestricted but API-restrict to Places API + Geocoding API. Stored as plain Data.",
+   "fieldname": "google_maps_server_key",
+   "fieldtype": "Data",
+   "label": "Google Maps Server Key"
+  },
+  {
+   "description": "Optional Firecrawl API key to pull a company summary + products from each customer's website during enrichment.",
+   "fieldname": "crm_firecrawl_api_key",
+   "fieldtype": "Data",
+   "label": "Firecrawl API Key"
+  },
+  {
+   "default": "0",
+   "description": "Run a nightly job that enriches geo-located customers/leads not refreshed in 30 days (requires the server key).",
+   "fieldname": "enable_geo_enrichment_schedule",
+   "fieldtype": "Check",
+   "label": "Enable nightly enrichment refresh"
   },
   {
    "fieldname": "map_home_section",

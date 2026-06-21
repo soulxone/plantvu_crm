@@ -197,6 +197,7 @@ scheduler_events = {
 	"daily_long": [
 		"crm.lead_syncing.background_sync.sync_leads_from_sources_daily",
 		"crm.api.sequences.abandon_stale_enrollments",
+		"crm.api.enrichment.enrich_stale",
 	],
 	"hourly_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_hourly"],
 	"monthly_long": ["crm.lead_syncing.background_sync.sync_leads_from_sources_monthly"],
