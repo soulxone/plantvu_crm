@@ -35,6 +35,9 @@
         <Button :label="__('Plan route')" :loading="routing" @click="planRoute">
           <template #prefix><LucideRoute class="h-4 w-4" /></template>
         </Button>
+        <Button :label="__('Smart route')" variant="subtle" :loading="smartRouting" @click="planSmartRoute">
+          <template #prefix><LucideSparkles class="h-4 w-4 text-ink-purple-3" /></template>
+        </Button>
         <Button :label="__('Fit')" @click="fitAll">
           <template #prefix><LucideMaximize class="h-4 w-4" /></template>
         </Button>
@@ -192,7 +195,48 @@
             <template #prefix><LucideRoute class="h-4 w-4" /></template>
             {{ routeStops.length === 1 ? __('Route to stop') : __('Route selected') }}
           </Button>
+          <Button v-if="routeStops.length > 1" variant="subtle" :loading="smartRouting" @click="planSmartRoute">
+            <template #prefix><LucideSparkles class="h-4 w-4 text-ink-purple-3" /></template>
+            {{ __('Smart route') }}
+          </Button>
           <Button variant="ghost" :label="__('Clear')" @click="clearRoute" />
+        </div>
+
+        <!-- Danczyk smart-route result -->
+        <div
+          v-if="smartResult"
+          class="absolute right-4 top-4 z-10 flex max-h-[80%] w-80 flex-col overflow-hidden rounded-xl border border-outline-gray-2 bg-surface-white shadow-xl"
+        >
+          <div class="flex items-center gap-2 border-b border-outline-gray-2 px-4 py-3">
+            <LucideSparkles class="h-4 w-4 text-ink-purple-3" />
+            <span class="text-sm font-semibold text-ink-gray-9">{{ __('Smart route') }}</span>
+            <span v-if="smartResult.ai_used" class="rounded-full bg-surface-purple-2 px-2 py-0.5 text-xs font-medium text-ink-purple-3">Danczyk</span>
+            <button class="ml-auto text-ink-gray-5 hover:text-ink-gray-8" @click="smartResult = null">✕</button>
+          </div>
+          <div class="flex items-center gap-4 border-b border-outline-gray-2 px-4 py-2 text-xs text-ink-gray-7">
+            <span><b class="text-ink-gray-9">{{ Math.round(smartResult.total_miles) }}</b> mi</span>
+            <span>≈ <b class="text-ink-gray-9">${{ smartResult.est_cost }}</b> {{ __('drive cost') }}</span>
+            <span class="text-ink-gray-5">${{ smartResult.mile_rate }}/mi</span>
+          </div>
+          <div class="overflow-y-auto px-4 py-3">
+            <p class="mb-3 text-sm leading-snug text-ink-gray-7">{{ smartResult.rationale }}</p>
+            <ol class="flex flex-col gap-2">
+              <li v-for="s in smartResult.stops" :key="s.id" class="flex gap-2 text-sm">
+                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-gray-3 text-xs font-semibold text-ink-gray-8">{{ s.n }}</span>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5">
+                    <span class="truncate font-medium text-ink-gray-9">{{ s.label }}</span>
+                    <span v-if="s.priority === 'high'" class="rounded bg-surface-red-2 px-1 text-xs text-ink-red-3">{{ __('high') }}</span>
+                  </div>
+                  <div v-if="s.note" class="text-xs leading-snug text-ink-gray-6">{{ s.note }}</div>
+                </div>
+              </li>
+            </ol>
+            <div v-if="smartResult.deferred.length" class="mt-3 border-t border-outline-gray-2 pt-2">
+              <div class="mb-1 text-xs font-semibold text-ink-gray-6">{{ __('Suggested to skip this trip') }}</div>
+              <div v-for="d in smartResult.deferred" :key="d.id" class="truncate text-xs text-ink-gray-5">• {{ d.label }}</div>
+            </div>
+          </div>
         </div>
 
         <div
@@ -256,6 +300,7 @@ import LucideRoute from '~icons/lucide/route'
 import LucideHelpCircle from '~icons/lucide/help-circle'
 import LucideTarget from '~icons/lucide/target'
 import LucideShapes from '~icons/lucide/shapes'
+import LucideSparkles from '~icons/lucide/sparkles'
 
 const router = useRouter()
 
@@ -273,6 +318,8 @@ const settings = ref(null)
 const records = ref([])
 const loading = ref(false)
 const routing = ref(false)
+const smartRouting = ref(false)
+const smartResult = ref(null) // Danczyk smart-route result panel
 const geocoding = ref(false)
 const mapReady = ref(false)
 const keyMissing = ref(false)
@@ -843,6 +890,73 @@ async function planRoute() {
     toast.error(__('Could not compute route'))
   } finally {
     routing.value = false
+  }
+}
+
+/* Danczyk smart route: geo-optimal order (Directions) → AI re-ranks by deal
+ * value/urgency vs drive cost → re-draw in the AI order + show rationale + cost. */
+async function planSmartRoute() {
+  const home = settings.value?.home
+  const selected = routeRecords.value.filter((r) => r.lat != null)
+  const pool = (selected.length ? selected : visibleRecords.value.filter((r) => r.lat != null)).slice(0, 24)
+  if (pool.length < 2) { toast.warning(__('Pick at least 2 stops (pin → Add to route) for a smart route')); return }
+  smartRouting.value = true
+  try {
+    const hasHome = !!(home?.lat && home?.lng)
+    const origin = hasHome ? { lat: home.lat, lng: home.lng } : { lat: pool[0].lat, lng: pool[0].lng }
+    const routeStopsArr = hasHome ? pool : pool.slice(1)
+    const destStop = routeStopsArr[routeStopsArr.length - 1]
+    const wpStops = routeStopsArr.slice(0, -1)
+    let geoOrdered = pool
+    let miles = 0
+    try {
+      const r = await dirService.route({
+        origin, destination: { lat: destStop.lat, lng: destStop.lng },
+        waypoints: wpStops.map((s) => ({ location: { lat: s.lat, lng: s.lng }, stopover: true })),
+        optimizeWaypoints: true, travelMode: google.maps.TravelMode.DRIVING,
+      })
+      const wo = r.routes[0].waypoint_order || wpStops.map((_, i) => i)
+      const head = hasHome ? [] : [pool[0]]
+      geoOrdered = [...head, ...wo.map((i) => wpStops[i]), destStop].filter(Boolean)
+      miles = r.routes[0].legs.reduce((a, l) => a + l.distance.value, 0) / 1609.34
+    } catch (e) { geoOrdered = pool }
+
+    const payload = geoOrdered.map((s) => ({ id: s.id, kind: s.kind, label: s.label, lat: s.lat, lng: s.lng }))
+    const res = await call('crm.api.routing.plan_smart_route', { stops: JSON.stringify(payload), total_miles: miles.toFixed(1) })
+
+    const byId = Object.fromEntries(pool.map((s) => [s.id, s]))
+    const deferred = new Set(res.deferred || [])
+    const finalStops = (res.order || []).map((id) => byId[id]).filter((s) => s && !deferred.has(s.id))
+
+    // draw the AI-recommended order (no re-optimize)
+    if (finalStops.length >= 1) {
+      const o = hasHome ? { lat: home.lat, lng: home.lng } : { lat: finalStops[0].lat, lng: finalStops[0].lng }
+      const body = hasHome ? finalStops : finalStops.slice(1)
+      if (body.length >= 1) {
+        try {
+          const dr = await dirService.route({
+            origin: o, destination: { lat: body[body.length - 1].lat, lng: body[body.length - 1].lng },
+            waypoints: body.slice(0, -1).map((s) => ({ location: { lat: s.lat, lng: s.lng }, stopover: true })),
+            optimizeWaypoints: false, travelMode: google.maps.TravelMode.DRIVING,
+          })
+          dirRenderer.setDirections(dr)
+        } catch (e) { /* keep geo route drawn */ }
+      }
+    }
+
+    const noteById = Object.fromEntries((res.stops || []).map((s) => [s.id, s]))
+    smartResult.value = {
+      ai_used: res.ai_used,
+      rationale: res.rationale,
+      est_cost: res.est_cost, total_miles: res.total_miles, mile_rate: res.mile_rate,
+      stops: finalStops.map((s, i) => ({ n: i + 1, id: s.id, label: s.label, kind: s.kind, note: noteById[s.id]?.note || '', priority: noteById[s.id]?.priority || '' })),
+      deferred: (res.deferred || []).map((id) => byId[id]).filter(Boolean).map((s) => ({ id: s.id, label: s.label })),
+    }
+    toast.success(res.ai_used ? __('Danczyk planned your route') : __('Route planned'))
+  } catch (e) {
+    toast.error(__('Smart route failed: ') + (e?.messages?.[0] || e?.message || e))
+  } finally {
+    smartRouting.value = false
   }
 }
 </script>
