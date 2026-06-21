@@ -481,9 +481,18 @@ function renderZones() {
   })
 }
 
-function toggleDrawZone() {
-  drawingZone.value = !drawingZone.value
+async function toggleDrawZone() {
   if (!drawingManager) {
+    // The `drawing` library doesn't reliably attach via the URL libraries param
+    // under loading=async — load it explicitly before using DrawingManager.
+    try {
+      if (!(window.google?.maps?.drawing?.DrawingManager)) {
+        await google.maps.importLibrary('drawing')
+      }
+    } catch (e) {
+      toast.error(__('Map drawing tools failed to load'))
+      return
+    }
     drawingManager = new google.maps.drawing.DrawingManager({
       drawingMode: null,
       drawingControl: false,
@@ -498,6 +507,7 @@ function toggleDrawZone() {
       Object.assign(zoneDialog, { show: true, points: pts, name: null, zone_name: '', territory: '', plant: '', assigned_rep: '', color: '#3F51B5' })
     })
   }
+  drawingZone.value = !drawingZone.value
   drawingManager.setDrawingMode(drawingZone.value ? google.maps.drawing.OverlayType.POLYGON : null)
 }
 
