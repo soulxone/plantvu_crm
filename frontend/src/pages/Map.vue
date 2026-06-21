@@ -22,12 +22,13 @@
         </select>
         <Button
           v-if="settings?.is_manager"
-          :label="drawingZone ? __('Drawing… click map') : __('Draw zone')"
+          :label="drawingZone ? (drawPoints.length >= 3 ? `${__('Finish zone')} (${drawPoints.length})` : `${__('Click corners')} (${drawPoints.length}/3)`) : __('Draw zone')"
           :variant="drawingZone ? 'solid' : 'subtle'"
           @click="toggleDrawZone"
         >
           <template #prefix><LucideShapes class="h-4 w-4" /></template>
         </Button>
+        <Button v-if="drawingZone" :label="__('Cancel')" variant="ghost" @click="cancelDrawing" />
         <Button v-if="settings?.is_manager" :label="__('Coverage')" :loading="recomputing" @click="recomputeCoverage">
           <template #prefix><LucideTarget class="h-4 w-4" /></template>
         </Button>
@@ -282,7 +283,10 @@ let homeMarker = null
 const markers = {} // id -> google.maps.Marker
 let plantOverlays = [] // markers + circles for plants/coverage
 let zoneOverlays = [] // zone polygons
-let drawingManager = null
+const drawPoints = ref([]) // vertices while manually drawing a zone
+let drawClickListener = null
+let drawDblListener = null
+let tempPolygon = null
 
 const mappedCount = computed(() => records.value.filter((r) => r.lat != null).length)
 
@@ -481,42 +485,44 @@ function renderZones() {
   })
 }
 
-let _overlayType = null
-async function toggleDrawZone() {
-  try {
-    if (!drawingManager) {
-      // Use importLibrary's RETURN VALUE — the modern async loader does not
-      // reliably attach google.maps.drawing.* to the namespace, so referencing
-      // google.maps.drawing.DrawingManager directly is `new undefined()`.
-      let DM = window.google?.maps?.drawing?.DrawingManager
-      _overlayType = window.google?.maps?.drawing?.OverlayType
-      if (!DM) {
-        const lib = await google.maps.importLibrary('drawing')
-        DM = lib.DrawingManager
-        _overlayType = lib.OverlayType
-      }
-      if (!DM) { toast.error(__('Drawing tools unavailable for this Maps key')); return }
-      drawingManager = new DM({
-        drawingMode: null,
-        drawingControl: false,
-        polygonOptions: { fillColor: '#3F51B5', fillOpacity: 0.15, strokeColor: '#3F51B5', strokeWeight: 2, clickable: false },
-      })
-      drawingManager.setMap(map)
-      drawingManager.addListener('polygoncomplete', (poly) => {
-        const pts = poly.getPath().getArray().map((ll) => [ll.lat(), ll.lng()])
-        poly.setMap(null) // remove temp; we re-render from server after save
-        drawingManager.setDrawingMode(null)
-        drawingZone.value = false
-        Object.assign(zoneDialog, { show: true, points: pts, name: null, zone_name: '', territory: '', plant: '', assigned_rep: '', color: '#3F51B5' })
-      })
-    }
-    drawingZone.value = !drawingZone.value
-    const OT = _overlayType || window.google?.maps?.drawing?.OverlayType
-    drawingManager.setDrawingMode(drawingZone.value ? OT.POLYGON : null)
-  } catch (e) {
-    drawingZone.value = false
-    toast.error(__('Zone drawing error: ') + (e?.message || e))
-  }
+// Google removed DrawingManager in Maps JS v3.65, so draw polygons manually with
+// core map click events: each click drops a vertex, "Finish zone" closes it.
+function toggleDrawZone() {
+  if (drawingZone.value) finishDrawing()
+  else startDrawing()
+}
+
+function startDrawing() {
+  drawingZone.value = true
+  drawPoints.value = []
+  if (tempPolygon) tempPolygon.setMap(null)
+  tempPolygon = new google.maps.Polygon({
+    map, paths: [], fillColor: '#3F51B5', fillOpacity: 0.15,
+    strokeColor: '#3F51B5', strokeWeight: 2, clickable: false, zIndex: 5,
+  })
+  map.setOptions({ disableDoubleClickZoom: true })
+  drawClickListener = map.addListener('click', (e) => {
+    drawPoints.value.push({ lat: e.latLng.lat(), lng: e.latLng.lng() })
+    tempPolygon.setPath(drawPoints.value)
+  })
+  drawDblListener = map.addListener('dblclick', () => finishDrawing())
+  toast.info(__('Click the map to add corners, then "Finish zone" (or double-click).'))
+}
+
+function cancelDrawing() {
+  drawingZone.value = false
+  if (drawClickListener) { drawClickListener.remove(); drawClickListener = null }
+  if (drawDblListener) { drawDblListener.remove(); drawDblListener = null }
+  if (tempPolygon) { tempPolygon.setMap(null); tempPolygon = null }
+  drawPoints.value = []
+  if (map) map.setOptions({ disableDoubleClickZoom: false })
+}
+
+function finishDrawing() {
+  const pts = drawPoints.value.map((p) => [p.lat, p.lng])
+  cancelDrawing()
+  if (pts.length < 3) { toast.warning(__('A zone needs at least 3 corners')); return }
+  Object.assign(zoneDialog, { show: true, points: pts, name: null, zone_name: '', territory: '', plant: '', assigned_rep: '', color: '#3F51B5' })
 }
 
 async function saveZone() {
