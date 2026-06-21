@@ -47,6 +47,14 @@ FEATURES = [
      "category": "CRM", "default_on": False,
      "methods": ["crm.api.enrichment.enrich_record", "crm.api.enrichment.get_enrichment",
                  "crm.api.enrichment.enrich_all"]},
+    {"key": "crm.battle_cards", "label": "Battle Cards (competitor intel)", "kind": "feature",
+     "category": "CRM", "default_on": True,
+     "methods": ["crm.api.battlecards.save_battlecard", "crm.api.battlecards.generate_battlecard",
+                 "crm.api.battlecards.get_battlecard", "crm.api.battlecards.list_battlecards",
+                 "crm.api.battlecards.list_in_area", "crm.api.battlecards.delete_battlecard"]},
+    {"key": "crm.smart_leads", "label": "Smart Leads (territory prospecting)", "kind": "feature",
+     "category": "CRM", "default_on": True,
+     "methods": ["crm.api.smart_leads.discover", "crm.api.smart_leads.create_leads"]},
 ]
 
 

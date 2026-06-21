@@ -32,3 +32,4 @@ crm.patches.v1_0.add_sequence_custom_fields # plantvu sequences
 crm.patches.v1_0.add_map_address_fields # plantvu crm map
 crm.patches.v1_0.add_map_assignment_fields # plantvu crm map coverage
 crm.patches.v1_0.add_geo_enrichment_fields # plantvu crm geo enrichment
+crm.patches.v1_0.add_smart_lead_fields # plantvu smart leads
