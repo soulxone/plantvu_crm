@@ -119,6 +119,12 @@
               {{ __('Zones') }}
               <span class="ml-auto rounded-full bg-surface-gray-2 px-2 text-xs text-ink-gray-6">{{ zones.length }}</span>
             </label>
+            <label v-if="settings?.is_manager" class="flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-gray-7">
+              <input type="checkbox" :checked="showCompetitors" @change="toggleCompetitors" />
+              <span class="inline-block" style="color:#C62828">◆</span>
+              {{ __('Competitors') }}
+              <span class="ml-auto rounded-full bg-surface-gray-2 px-2 text-xs text-ink-gray-6">{{ competitors.length }}</span>
+            </label>
 
             <!-- per-plant show/hide (like the customer list) -->
             <div v-if="showPlantList" class="mt-1 max-h-44 overflow-y-auto rounded border border-outline-gray-1">
@@ -239,6 +245,92 @@
           </div>
         </div>
 
+        <!-- Territory tools: Smart Leads + Battle Cards -->
+        <div
+          v-if="territory.open"
+          class="absolute right-4 top-4 z-20 flex max-h-[86%] w-96 flex-col overflow-hidden rounded-xl border border-outline-gray-2 bg-surface-white shadow-xl"
+        >
+          <div class="flex items-center gap-2 border-b border-outline-gray-2 px-4 py-3">
+            <LucideSparkles class="h-4 w-4 text-ink-purple-3" />
+            <span class="text-sm font-semibold text-ink-gray-9">{{ __('Territory tools') }}</span>
+            <span class="truncate text-xs text-ink-gray-5">{{ territory.label }}</span>
+            <button class="ml-auto text-ink-gray-5 hover:text-ink-gray-8" @click="territory.open = false">✕</button>
+          </div>
+          <div v-if="territory.type === 'ring'" class="flex items-center gap-1.5 border-b border-outline-gray-2 px-4 py-2 text-xs">
+            <span class="text-ink-gray-5">{{ __('Radius') }}:</span>
+            <button v-for="mi in [25, 50, 100, 150]" :key="mi" @click="setRingRadius(mi)"
+              :class="territory.radius_mi === mi ? 'bg-ink-purple-3 text-white' : 'bg-surface-gray-2 text-ink-gray-7'"
+              class="rounded px-2 py-0.5 font-medium">{{ mi }} mi</button>
+          </div>
+          <div class="flex border-b border-outline-gray-2 text-sm">
+            <button @click="territory.tab = 'smart'" :class="territory.tab === 'smart' ? 'border-ink-purple-3 text-ink-purple-3' : 'border-transparent text-ink-gray-6'" class="flex-1 border-b-2 py-2 font-medium">✨ {{ __('Smart Leads') }}</button>
+            <button @click="territory.tab = 'battle'; battle.cards.length || loadBattleInArea()" :class="territory.tab === 'battle' ? 'border-ink-purple-3 text-ink-purple-3' : 'border-transparent text-ink-gray-6'" class="flex-1 border-b-2 py-2 font-medium">⚔ {{ __('Battle Cards') }}</button>
+          </div>
+
+          <div class="overflow-y-auto px-4 py-3">
+            <!-- Smart Leads -->
+            <template v-if="territory.tab === 'smart'">
+              <Button class="w-full" variant="solid" :loading="smartLeads.loading" :label="__('Find prospects in this area')" @click="findSmartLeads" />
+              <div v-if="smartLeads.candidates.length" class="mt-3 flex flex-col gap-1.5">
+                <label v-for="c in smartLeads.candidates" :key="c.place_id" class="flex cursor-pointer items-start gap-2 rounded p-1 hover:bg-surface-gray-2">
+                  <input type="checkbox" class="mt-1" :checked="smartLeads.selected.includes(c.place_id)" @change="toggleCand(c.place_id)" />
+                  <div class="min-w-0">
+                    <div class="truncate text-sm font-medium text-ink-gray-9">{{ c.name }}</div>
+                    <div class="truncate text-xs text-ink-gray-5">{{ c.address }}<span v-if="c.category"> · {{ c.category }}</span><span v-if="c.rating"> · ★{{ c.rating }}</span></div>
+                  </div>
+                </label>
+                <Button class="mt-1" variant="solid" :loading="smartLeads.adding" :disabled="!smartLeads.selected.length"
+                  :label="`${__('Add')} ${smartLeads.selected.length} ${__('as Leads')}`" @click="addSmartLeads" />
+              </div>
+            </template>
+
+            <!-- Battle Cards -->
+            <template v-else>
+              <div class="rounded-lg border border-outline-gray-2 p-2">
+                <div class="mb-1 text-xs font-semibold text-ink-gray-7">{{ __('Add competitor') }}</div>
+                <input v-model="battle.form.competitor_name" :placeholder="__('Competitor name')" class="form-input mb-1 w-full text-sm" />
+                <input v-model="battle.form.address_line1" :placeholder="__('Street address')" class="form-input mb-1 w-full text-sm" />
+                <div class="mb-1 flex gap-1">
+                  <input v-model="battle.form.city" :placeholder="__('City')" class="form-input w-full text-sm" />
+                  <input v-model="battle.form.state" placeholder="ST" class="form-input w-14 text-sm" />
+                  <input v-model="battle.form.pincode" placeholder="ZIP" class="form-input w-20 text-sm" />
+                </div>
+                <input v-model="battle.form.website" :placeholder="__('Website (optional)')" class="form-input mb-1 w-full text-sm" />
+                <Button class="w-full" variant="subtle" :loading="battle.adding" :label="__('Save competitor')" @click="saveCompetitor" />
+              </div>
+              <div class="mt-3 mb-1 text-xs font-semibold text-ink-gray-6">{{ __('Competitors in this area') }}</div>
+              <div v-if="battle.loading" class="text-xs text-ink-gray-5">{{ __('Loading…') }}</div>
+              <div v-else-if="!battle.cards.length" class="text-xs text-ink-gray-5">{{ __('None yet — add one above.') }}</div>
+              <div v-for="c in battle.cards" :key="c.name" class="flex items-center gap-2 border-t border-outline-gray-1 py-1.5">
+                <span style="color:#C62828">◆</span>
+                <span class="flex-1 truncate text-sm text-ink-gray-9">{{ c.competitor_name }}</span>
+                <button v-if="!c.ai_generated" class="text-xs font-medium text-ink-purple-3 hover:underline" :disabled="battle.generating === c.name" @click="generateCard(c.name)">{{ battle.generating === c.name ? '…' : '✨ ' + __('Create card') }}</button>
+                <button class="text-xs text-ink-blue-3 hover:underline" @click="viewCard(c)">{{ __('View') }}</button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Battle card detail -->
+        <div v-if="battle.active" class="absolute inset-x-4 bottom-4 z-30 max-h-[72%] overflow-y-auto rounded-xl border border-outline-gray-2 bg-surface-white p-4 shadow-2xl">
+          <div class="mb-3 flex items-center gap-2">
+            <span style="color:#C62828">⚔</span>
+            <span class="font-semibold text-ink-gray-9">{{ battle.active.competitor_name }}</span>
+            <span v-if="battle.active.industry" class="text-xs text-ink-gray-5">{{ battle.active.industry }}</span>
+            <span v-if="battle.active.ai_generated" class="rounded-full bg-surface-purple-2 px-2 py-0.5 text-xs font-medium text-ink-purple-3">Danczyk</span>
+            <a v-if="battle.active.website" :href="battle.active.website" target="_blank" class="text-xs text-ink-blue-3 hover:underline">{{ __('website') }}</a>
+            <button class="ml-auto text-ink-gray-5 hover:text-ink-gray-8" @click="battle.active = null">✕</button>
+          </div>
+          <Button v-if="!battle.active.overview && !battle.active.how_we_win" variant="solid"
+            :loading="battle.generating === battle.active.name" :label="`✨ ${__('Create battle card')}`" @click="generateCard(battle.active.name)" />
+          <div v-else class="grid grid-cols-2 gap-x-5 gap-y-3 text-sm text-ink-gray-7">
+            <div><div class="mb-0.5 text-xs font-semibold uppercase tracking-wide text-ink-gray-5">{{ __('Who they are') }}</div><p class="leading-snug">{{ battle.active.overview }}</p></div>
+            <div><div class="mb-0.5 text-xs font-semibold uppercase tracking-wide text-ink-gray-5">{{ __('How we win') }}</div><p class="whitespace-pre-line leading-snug">{{ battle.active.how_we_win }}</p></div>
+            <div><div class="mb-0.5 text-xs font-semibold uppercase tracking-wide text-ink-gray-5">{{ __("Where they're strong") }}</div><p class="whitespace-pre-line leading-snug">{{ battle.active.watch_outs }}</p></div>
+            <div><div class="mb-0.5 text-xs font-semibold uppercase tracking-wide text-ink-gray-5">{{ __('Proof points / talk track') }}</div><p class="whitespace-pre-line leading-snug">{{ battle.active.proof_points }}</p></div>
+          </div>
+        </div>
+
         <div
           v-if="!mapReady"
           class="absolute inset-0 flex items-center justify-center bg-surface-white/80"
@@ -347,6 +439,15 @@ const drawingZone = ref(false)
 const zoneDialog = reactive({ show: false, points: [], name: null, zone_name: '', territory: '', plant: '', assigned_rep: '', color: '#3F51B5' })
 const routeStops = ref([]) // selected record ids, in pick order
 
+/* ── Territory tools: Smart Leads + Battle Cards (off a ring/zone) ──────────── */
+const showCompetitors = ref(false)
+const competitors = ref([]) // all battle cards (competitor pins)
+let competitorOverlays = []
+const territory = reactive({ open: false, type: null, label: '', lat: null, lng: null, radius_mi: 50, points: null, tab: 'smart' })
+const smartLeads = reactive({ loading: false, candidates: [], selected: [], adding: false })
+const battle = reactive({ loading: false, cards: [], active: null, adding: false, generating: '',
+  form: { competitor_name: '', website: '', industry: '', address_line1: '', city: '', state: '', pincode: '' } })
+
 let map = null
 let infoWindow = null
 let dirService = null
@@ -395,6 +496,7 @@ onMounted(async () => {
     initMap()
     loadPlants()
     loadZones()
+    if (settings.value?.is_manager) loadCompetitors()
     await loadRecords()
   } catch (e) {
     toast.error(__('Failed to load Google Maps'))
@@ -500,11 +602,18 @@ function renderPlants() {
     })
     marker.addListener('click', () => {
       infoWindow.setContent(
-        `<div style="min-width:170px"><strong>${escapeHtml(p.plant_name)}</strong>` +
+        `<div style="min-width:180px"><strong>${escapeHtml(p.plant_name)}</strong>` +
         (p.company ? `<div style="font-size:12px;color:#666">${escapeHtml(p.company)}</div>` : '') +
         (p.address ? `<div style="font-size:12px;color:#444;margin:4px 0">${escapeHtml(p.address)}</div>` : '') +
-        `<div style="font-size:12px;color:#555">Coverage: ${p.radius_green_mi||0}/${p.radius_yellow_mi||0}/${p.radius_red_mi||0} mi</div></div>`)
+        `<div style="font-size:12px;color:#555">Coverage: ${p.radius_green_mi||0}/${p.radius_yellow_mi||0}/${p.radius_red_mi||0} mi</div>` +
+        (settings.value?.is_manager
+          ? `<div style="margin-top:6px"><a href="#" id="crm-terr-plant" style="font-size:12px;font-weight:600;color:#7C4DFF">✨ Territory tools</a></div>` : '') +
+        `</div>`)
       infoWindow.open(map, marker)
+      google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
+        const a = document.getElementById('crm-terr-plant')
+        if (a) a.addEventListener('click', (ev) => { ev.preventDefault(); infoWindow.close(); openTerritoryRing(p, p.radius_red_mi || 50) })
+      })
     })
     plantOverlays.push(marker)
   })
@@ -548,13 +657,17 @@ function renderZones() {
         `<div style="font-size:12px;color:#555;margin-top:3px">Plant: <b>${escapeHtml(plantName)}</b></div>` +
         (rep ? `<div style="font-size:12px;color:#555">Rep: <b>${escapeHtml(rep.name)}</b></div>` : '') +
         (settings.value?.is_manager
-          ? `<div style="margin-top:6px"><a href="#" id="crm-zone-del" style="font-size:12px;font-weight:600;color:#E0533B">Delete zone</a></div>` : '') +
+          ? `<div style="margin-top:6px;display:flex;gap:12px">` +
+            `<a href="#" id="crm-terr-zone" style="font-size:12px;font-weight:600;color:#7C4DFF">✨ Territory tools</a>` +
+            `<a href="#" id="crm-zone-del" style="font-size:12px;font-weight:600;color:#E0533B">Delete zone</a></div>` : '') +
         `</div>`)
       infoWindow.setPosition(e.latLng)
       infoWindow.open(map)
       google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
         const a = document.getElementById('crm-zone-del')
         if (a) a.addEventListener('click', (ev) => { ev.preventDefault(); deleteZone(z) })
+        const t = document.getElementById('crm-terr-zone')
+        if (t) t.addEventListener('click', (ev) => { ev.preventDefault(); infoWindow.close(); openTerritoryZone(z) })
       })
     })
     zoneOverlays.push(poly)
@@ -958,5 +1071,106 @@ async function planSmartRoute() {
   } finally {
     smartRouting.value = false
   }
+}
+
+/* ── Territory tools ───────────────────────────────────────────────────────── */
+async function loadCompetitors() {
+  try { competitors.value = await call('crm.api.battlecards.list_battlecards') }
+  catch (e) { competitors.value = [] }
+  renderCompetitors()
+}
+function clearCompetitors() { competitorOverlays.forEach((o) => o.setMap(null)); competitorOverlays = [] }
+function renderCompetitors() {
+  clearCompetitors()
+  if (!showCompetitors.value || !map) return
+  const icon = {
+    path: 'M 0,-10 L 8,0 L 0,10 L -8,0 Z', fillColor: '#C62828', fillOpacity: 0.95,
+    strokeColor: '#fff', strokeWeight: 1.5, scale: 1,
+  }
+  competitors.value.forEach((c) => {
+    if (c.latitude == null || c.longitude == null) return
+    const m = new google.maps.Marker({ map, position: { lat: c.latitude, lng: c.longitude },
+      title: `${c.competitor_name} (competitor)`, zIndex: 7000, icon })
+    m.addListener('click', () => viewCard(c))
+    competitorOverlays.push(m)
+  })
+}
+function toggleCompetitors() { showCompetitors.value = !showCompetitors.value; if (showCompetitors.value && !competitors.value.length) loadCompetitors(); else renderCompetitors() }
+
+function openTerritoryRing(p, radius) {
+  Object.assign(territory, { open: true, type: 'ring', label: `${radius} mi · ${p.plant_name}`,
+    lat: p.latitude, lng: p.longitude, radius_mi: radius, points: null, tab: 'smart' })
+  smartLeads.candidates = []; smartLeads.selected = []; battle.cards = []; battle.active = null
+}
+function openTerritoryZone(z) {
+  Object.assign(territory, { open: true, type: 'zone', label: `Zone · ${z.zone_name}`,
+    points: z.points, lat: null, lng: null, tab: 'smart' })
+  smartLeads.candidates = []; smartLeads.selected = []; battle.cards = []; battle.active = null
+}
+function setRingRadius(mi) { territory.radius_mi = mi; territory.label = territory.label.replace(/^\d+ mi/, `${mi} mi`); smartLeads.candidates = []; battle.cards = [] }
+function _scopeArg() {
+  return territory.type === 'ring'
+    ? { scope_type: 'ring', scope: JSON.stringify({ lat: territory.lat, lng: territory.lng, radius_mi: territory.radius_mi }) }
+    : { scope_type: 'zone', scope: JSON.stringify({ points: territory.points }) }
+}
+
+async function findSmartLeads() {
+  smartLeads.loading = true
+  try {
+    const r = await call('crm.api.smart_leads.discover', _scopeArg())
+    smartLeads.candidates = r.candidates || []; smartLeads.selected = []
+    if (!smartLeads.candidates.length) toast.info(__('No new prospects found in this area'))
+  } catch (e) { toast.error(__('Smart Leads failed: ') + (e?.messages?.[0] || e?.message || e)) }
+  finally { smartLeads.loading = false }
+}
+function toggleCand(id) {
+  const i = smartLeads.selected.indexOf(id)
+  if (i >= 0) smartLeads.selected.splice(i, 1); else smartLeads.selected.push(id)
+}
+async function addSmartLeads() {
+  const chosen = smartLeads.candidates.filter((c) => smartLeads.selected.includes(c.place_id))
+  if (!chosen.length) { toast.warning(__('Select at least one prospect')); return }
+  smartLeads.adding = true
+  try {
+    const r = await call('crm.api.smart_leads.create_leads', { candidates: JSON.stringify(chosen) })
+    toast.success(`${r.count} ${__('Smart Leads added')}`)
+    smartLeads.candidates = smartLeads.candidates.filter((c) => !smartLeads.selected.includes(c.place_id))
+    smartLeads.selected = []
+    loadRecords()
+  } catch (e) { toast.error(__('Could not add leads')) }
+  finally { smartLeads.adding = false }
+}
+
+async function loadBattleInArea() {
+  battle.loading = true
+  try { battle.cards = await call('crm.api.battlecards.list_in_area', _scopeArg()) }
+  catch (e) { battle.cards = [] }
+  finally { battle.loading = false }
+}
+async function saveCompetitor() {
+  if (!battle.form.competitor_name) { toast.warning(__('Enter a competitor name')); return }
+  battle.adding = true
+  try {
+    const payload = Object.assign({}, battle.form, { territory: territory.label })
+    const r = await call('crm.api.battlecards.save_battlecard', { payload: JSON.stringify(payload) })
+    toast.success(r.geocoded ? __('Competitor saved + located') : __('Competitor saved (address not geocoded)'))
+    battle.form = { competitor_name: '', website: '', industry: '', address_line1: '', city: '', state: '', pincode: '' }
+    await loadCompetitors()
+    if (territory.open) loadBattleInArea()
+  } catch (e) { toast.error(__('Could not save competitor')) }
+  finally { battle.adding = false }
+}
+async function generateCard(name) {
+  battle.generating = name
+  try {
+    const r = await call('crm.api.battlecards.generate_battlecard', { name })
+    if (r.error) { toast.error(r.error) }
+    else { toast.success(__('Battle card generated')); await viewCard({ name }); loadCompetitors() }
+  } catch (e) { toast.error(__('Generation failed')) }
+  finally { battle.generating = '' }
+}
+async function viewCard(card) {
+  try { battle.active = await call('crm.api.battlecards.get_battlecard', { name: card.name }) }
+  catch (e) { toast.error(__('Could not open card')) }
 }
 </script>
