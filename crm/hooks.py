@@ -216,6 +216,10 @@ scheduler_events = {
 # Testing
 # -------
 
+# Plantvu Control-Plane: register the CRM fork's add-in surfaces (Map, Smart
+# Route, Sales AI, Sequences, Forecast, Enrichment, ...) as toggleable modules.
+pa_features = ["crm.pa_features.get_features"]
+
 before_tests = "crm.tests.before_tests"
 
 # Overriding Methods

@@ -1,0 +1,37 @@
+name: dataguard
+# Server-side data-leak gate: fails the build if a push/PR introduces customer
+# data, PII, or secrets. Scoped to *changed* files so it never chokes on history
+# or upstream code in a fork.
+on:
+  pull_request:
+  push:
+    branches: ["**"]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Resolve base ref
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "ref=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            before="${{ github.event.before }}"
+            if [ -n "$before" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then
+              echo "ref=$before" >> "$GITHUB_OUTPUT"
+            else
+              echo "ref=HEAD~1" >> "$GITHUB_OUTPUT"   # first push to a branch
+            fi
+          fi
+      - name: Run dataguard on changed files
+        run: |
+          base="${{ steps.base.outputs.ref }}"
+          echo "Scanning changes vs $base"
+          python dataguard.py --changed "$base"

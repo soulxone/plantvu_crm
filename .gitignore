@@ -20,3 +20,31 @@ CLAUDE.md
 AGENTS.md
 .claude
 .pi
+
+# ── dataguard: keep data & secrets out of Git ──────────────────────────────
+# Credentials / site config / DB dumps — never commit these.
+*.env
+.env
+.env.*
+!*.env.example
+!*.env.sample
+!*.env.template
+site_config.json
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.dump
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+# Welch-/customer-specific bits peeled out of shared apps live here, ignored.
+_welch_peeled/
+# Filled spreadsheets/exports hold records — keep only BLANK templates in Git.
+# (dataguard also scans spreadsheet *contents* for PII regardless of this list.)
+# *.xlsx
+# *.csv
