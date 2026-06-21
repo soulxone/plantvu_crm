@@ -481,34 +481,42 @@ function renderZones() {
   })
 }
 
+let _overlayType = null
 async function toggleDrawZone() {
-  if (!drawingManager) {
-    // The `drawing` library doesn't reliably attach via the URL libraries param
-    // under loading=async — load it explicitly before using DrawingManager.
-    try {
-      if (!(window.google?.maps?.drawing?.DrawingManager)) {
-        await google.maps.importLibrary('drawing')
+  try {
+    if (!drawingManager) {
+      // Use importLibrary's RETURN VALUE — the modern async loader does not
+      // reliably attach google.maps.drawing.* to the namespace, so referencing
+      // google.maps.drawing.DrawingManager directly is `new undefined()`.
+      let DM = window.google?.maps?.drawing?.DrawingManager
+      _overlayType = window.google?.maps?.drawing?.OverlayType
+      if (!DM) {
+        const lib = await google.maps.importLibrary('drawing')
+        DM = lib.DrawingManager
+        _overlayType = lib.OverlayType
       }
-    } catch (e) {
-      toast.error(__('Map drawing tools failed to load'))
-      return
+      if (!DM) { toast.error(__('Drawing tools unavailable for this Maps key')); return }
+      drawingManager = new DM({
+        drawingMode: null,
+        drawingControl: false,
+        polygonOptions: { fillColor: '#3F51B5', fillOpacity: 0.15, strokeColor: '#3F51B5', strokeWeight: 2, clickable: false },
+      })
+      drawingManager.setMap(map)
+      drawingManager.addListener('polygoncomplete', (poly) => {
+        const pts = poly.getPath().getArray().map((ll) => [ll.lat(), ll.lng()])
+        poly.setMap(null) // remove temp; we re-render from server after save
+        drawingManager.setDrawingMode(null)
+        drawingZone.value = false
+        Object.assign(zoneDialog, { show: true, points: pts, name: null, zone_name: '', territory: '', plant: '', assigned_rep: '', color: '#3F51B5' })
+      })
     }
-    drawingManager = new google.maps.drawing.DrawingManager({
-      drawingMode: null,
-      drawingControl: false,
-      polygonOptions: { fillColor: '#3F51B5', fillOpacity: 0.15, strokeColor: '#3F51B5', strokeWeight: 2, clickable: false },
-    })
-    drawingManager.setMap(map)
-    drawingManager.addListener('polygoncomplete', (poly) => {
-      const pts = poly.getPath().getArray().map((ll) => [ll.lat(), ll.lng()])
-      poly.setMap(null) // remove temp; we re-render from server after save
-      drawingManager.setDrawingMode(null)
-      drawingZone.value = false
-      Object.assign(zoneDialog, { show: true, points: pts, name: null, zone_name: '', territory: '', plant: '', assigned_rep: '', color: '#3F51B5' })
-    })
+    drawingZone.value = !drawingZone.value
+    const OT = _overlayType || window.google?.maps?.drawing?.OverlayType
+    drawingManager.setDrawingMode(drawingZone.value ? OT.POLYGON : null)
+  } catch (e) {
+    drawingZone.value = false
+    toast.error(__('Zone drawing error: ') + (e?.message || e))
   }
-  drawingZone.value = !drawingZone.value
-  drawingManager.setDrawingMode(drawingZone.value ? google.maps.drawing.OverlayType.POLYGON : null)
 }
 
 async function saveZone() {
