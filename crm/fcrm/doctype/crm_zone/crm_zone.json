@@ -1,0 +1,44 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:zone_name",
+ "creation": "2026-06-21 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "zone_name",
+  "territory",
+  "plant",
+  "assigned_rep",
+  "active",
+  "column_break_z1",
+  "color",
+  "polygon"
+ ],
+ "fields": [
+  {"fieldname": "zone_name", "fieldtype": "Data", "label": "Zone Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+  {"fieldname": "territory", "fieldtype": "Data", "label": "Territory", "in_list_view": 1, "description": "Grouping label (the territory this zone belongs to)."},
+  {"fieldname": "plant", "fieldtype": "Link", "label": "Plant", "options": "CRM Plant", "in_list_view": 1},
+  {"fieldname": "assigned_rep", "fieldtype": "Link", "label": "Assigned Rep", "options": "User"},
+  {"fieldname": "active", "fieldtype": "Check", "label": "Active", "default": "1"},
+  {"fieldname": "column_break_z1", "fieldtype": "Column Break"},
+  {"fieldname": "color", "fieldtype": "Data", "label": "Color", "default": "#3F51B5"},
+  {"fieldname": "polygon", "fieldtype": "Long Text", "label": "Polygon (JSON)", "description": "JSON array of [lat, lng] vertices."}
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-21 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "FCRM",
+ "name": "CRM Zone",
+ "owner": "Administrator",
+ "permissions": [
+  {"role": "System Manager", "create": 1, "read": 1, "write": 1, "delete": 1, "report": 1, "export": 1, "share": 1, "print": 1, "email": 1},
+  {"role": "Sales Manager", "create": 1, "read": 1, "write": 1, "delete": 1, "report": 1, "export": 1, "share": 1, "print": 1, "email": 1},
+  {"role": "Sales User", "read": 1}
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

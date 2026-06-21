@@ -515,6 +515,70 @@ def delete_plant(name):
 	return {"ok": True}
 
 
+@frappe.whitelist()
+def get_zones():
+	"""Drawn zone polygons (territory grouping + plant + rep + GeoJSON)."""
+	_require_crm_user()
+	if not frappe.db.exists("DocType", "CRM Zone"):
+		return []
+	rows = frappe.get_all(
+		"CRM Zone", filters={"active": 1},
+		fields=["name", "zone_name", "territory", "plant", "assigned_rep", "color", "polygon"])
+	out = []
+	for r in rows:
+		try:
+			r["points"] = json.loads(r.get("polygon") or "[]")
+		except Exception:
+			r["points"] = []
+		r.pop("polygon", None)
+		out.append(r)
+	return out
+
+
+@frappe.whitelist()
+def save_zone(zone):
+	"""Create/update a drawn zone (manager only). `points` = [[lat,lng],...]."""
+	_require_manager()
+	if isinstance(zone, str):
+		zone = json.loads(zone)
+	name = zone.get("name")
+	doc = frappe.get_doc("CRM Zone", name) if name and frappe.db.exists("CRM Zone", name) else frappe.new_doc("CRM Zone")
+	for f in ("zone_name", "territory", "plant", "assigned_rep", "color"):
+		if zone.get(f) is not None:
+			doc.set(f, zone.get(f))
+	if zone.get("points") is not None:
+		doc.polygon = json.dumps(zone.get("points"))
+	doc.active = 1
+	doc.save()
+	frappe.db.commit()
+	return {"name": doc.name}
+
+
+@frappe.whitelist()
+def delete_zone(name):
+	_require_manager()
+	if frappe.db.exists("CRM Zone", name):
+		frappe.db.set_value("CRM Zone", name, "active", 0)
+		frappe.db.commit()
+	return {"ok": True}
+
+
+def _point_in_polygon(lat, lng, poly):
+	"""Ray-casting point-in-polygon. poly = [[lat,lng],...]."""
+	inside = False
+	n = len(poly)
+	if n < 3:
+		return False
+	j = n - 1
+	for i in range(n):
+		yi, xi = poly[i][0], poly[i][1]
+		yj, xj = poly[j][0], poly[j][1]
+		if ((xi > lng) != (xj > lng)) and (lat < (yj - yi) * (lng - xi) / ((xj - xi) or 1e-12) + yi):
+			inside = not inside
+		j = i
+	return inside
+
+
 def _assignment_fields(doctype):
 	"""Custom assignment fields present on the doctype (added by patch)."""
 	meta = frappe.get_meta(doctype)
@@ -527,16 +591,17 @@ def _assignment_fields(doctype):
 
 @frappe.whitelist()
 def recompute_assignments():
-	"""Assign each addressed customer/lead to its nearest plant within coverage.
+	"""Assign each addressed customer/lead to a territory zone, then plant + rep.
 
-	Phase 2a: nearest active plant whose RED radius covers the record. Writes the
-	persisted assignment fields. Records with no plant in range are flagged as
-	coverage gaps (cleared assignment). Zone (polygon) assignment lands in 2b.
+	Priority: (1) point-in-polygon into a drawn CRM Zone -> zone.plant + zone.rep;
+	(2) fallback to nearest active plant whose RED radius covers the record.
+	Writes persisted assignment fields; out-of-range records are flagged as gaps.
 	"""
 	_require_manager()
 	plants = [p for p in get_plants() if p.get("latitude") and p.get("longitude")]
-	if not plants:
-		return {"error": "No plants with coordinates configured."}
+	zones = [z for z in get_zones() if z.get("points")]
+	if not plants and not zones:
+		return {"error": "No plants or zones with coordinates configured."}
 	cache = frappe.cache().get_value(GEO_CACHE_KEY) or {}
 
 	def nearest(lat, lng):
@@ -549,8 +614,14 @@ def recompute_assignments():
 			return best, round(best_d, 1)
 		return None, (round(best_d, 1) if best_d is not None else None)
 
+	def zone_for(lat, lng):
+		for z in zones:
+			if _point_in_polygon(lat, lng, z["points"]):
+				return z
+		return None
+
 	# iterate customers + leads that have a cached geocode
-	assigned, gaps, scanned = 0, 0, 0
+	assigned, gaps, scanned, by_zone = 0, 0, 0, 0
 	for kind, collector in (("Customer", _collect_customers), ("CRM Lead", _collect_leads)):
 		af = _assignment_fields(kind)
 		if not af["plant"]:
@@ -561,21 +632,35 @@ def recompute_assignments():
 			if not coords:
 				continue
 			scanned += 1
+			z = zone_for(coords["lat"], coords["lng"])
 			plant, dist = nearest(coords["lat"], coords["lng"])
 			name = rec["ref"]["name"] if rec.get("ref") else rec["id"].split("::", 1)[-1]
 			vals = {}
-			if plant:
+			if z:
+				vals[af["plant"]] = z.get("plant") or (plant["name"] if plant else "")
+				if af.get("zone"):
+					vals[af["zone"]] = z.get("zone_name") or z.get("name")
+				if af.get("rep") and z.get("assigned_rep"):
+					vals[af["rep"]] = z.get("assigned_rep")
+				assigned += 1
+				by_zone += 1
+			elif plant:
 				vals[af["plant"]] = plant["name"]
+				if af.get("zone"):
+					vals[af["zone"]] = ""
 				assigned += 1
 			else:
 				vals[af["plant"]] = ""
+				if af.get("zone"):
+					vals[af["zone"]] = ""
 				gaps += 1
 			try:
 				frappe.db.set_value(kind, name, vals, update_modified=False)
 			except Exception:
 				pass
 	frappe.db.commit()
-	return {"scanned": scanned, "assigned": assigned, "gaps": gaps, "plants": len(plants)}
+	return {"scanned": scanned, "assigned": assigned, "by_zone": by_zone, "gaps": gaps,
+	        "plants": len(plants), "zones": len(zones)}
 
 
 @frappe.whitelist()

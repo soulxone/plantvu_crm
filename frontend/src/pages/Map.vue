@@ -20,6 +20,14 @@
           <option value="__me__">{{ __('My records') }}</option>
           <option v-for="r in settings.reps" :key="r.id" :value="r.id">{{ r.name }}</option>
         </select>
+        <Button
+          v-if="settings?.is_manager"
+          :label="drawingZone ? __('Drawing… click map') : __('Draw zone')"
+          :variant="drawingZone ? 'solid' : 'subtle'"
+          @click="toggleDrawZone"
+        >
+          <template #prefix><LucideShapes class="h-4 w-4" /></template>
+        </Button>
         <Button v-if="settings?.is_manager" :label="__('Coverage')" :loading="recomputing" @click="recomputeCoverage">
           <template #prefix><LucideTarget class="h-4 w-4" /></template>
         </Button>
@@ -83,6 +91,12 @@
               <input type="checkbox" v-model="showCoverage" @change="renderPlants" />
               <span class="inline-block h-3 w-3 rounded-full border border-dashed" style="border-color:#1FA85A" />
               {{ __('Coverage rings') }}
+            </label>
+            <label class="flex cursor-pointer items-center gap-2 py-1 text-sm text-ink-gray-7">
+              <input type="checkbox" v-model="showZones" @change="renderZones" />
+              <span class="inline-block h-3 w-3 rounded-sm" style="background:#3F51B5;opacity:0.4" />
+              {{ __('Zones') }}
+              <span class="ml-auto rounded-full bg-surface-gray-2 px-2 text-xs text-ink-gray-6">{{ zones.length }}</span>
             </label>
 
             <!-- per-plant show/hide (like the customer list) -->
@@ -177,13 +191,45 @@
         </div>
       </div>
     </div>
+
+    <!-- Zone save dialog -->
+    <Dialog v-model="zoneDialog.show" :options="{ title: __('New Zone') }">
+      <template #body-content>
+        <div class="flex flex-col gap-3">
+          <FormControl v-model="zoneDialog.zone_name" type="text" :label="__('Zone name')" :placeholder="__('e.g. Memphis Metro')" />
+          <FormControl v-model="zoneDialog.territory" type="text" :label="__('Territory')" :placeholder="__('e.g. Mid-South')" />
+          <div>
+            <div class="mb-1 text-xs text-ink-gray-5">{{ __('Plant') }}</div>
+            <select v-model="zoneDialog.plant" class="form-select w-full rounded border border-outline-gray-2 bg-surface-white text-sm">
+              <option value="">{{ __('— none —') }}</option>
+              <option v-for="p in plants" :key="p.name" :value="p.name">{{ p.plant_name }}</option>
+            </select>
+          </div>
+          <div>
+            <div class="mb-1 text-xs text-ink-gray-5">{{ __('Assigned rep') }}</div>
+            <select v-model="zoneDialog.assigned_rep" class="form-select w-full rounded border border-outline-gray-2 bg-surface-white text-sm">
+              <option value="">{{ __('— none —') }}</option>
+              <option v-for="r in (settings?.reps || [])" :key="r.id" :value="r.id">{{ r.name }}</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-ink-gray-5">{{ __('Color') }}</span>
+            <input type="color" v-model="zoneDialog.color" class="h-8 w-12 rounded border border-outline-gray-2" />
+            <span class="text-xs text-ink-gray-5">{{ zoneDialog.points.length }} {{ __('vertices') }}</span>
+          </div>
+        </div>
+      </template>
+      <template #actions>
+        <Button variant="solid" class="w-full" :label="__('Save zone')" @click="saveZone" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { call, Button, LoadingIndicator, toast } from 'frappe-ui'
+import { call, Button, LoadingIndicator, Dialog, FormControl, toast } from 'frappe-ui'
 import LayoutHeader from '@/components/LayoutHeader.vue'
 import LucideMapPinned from '~icons/lucide/map-pinned'
 import LucideRefreshCcw from '~icons/lucide/refresh-ccw'
@@ -191,6 +237,7 @@ import LucideMaximize from '~icons/lucide/maximize'
 import LucideRoute from '~icons/lucide/route'
 import LucideHelpCircle from '~icons/lucide/help-circle'
 import LucideTarget from '~icons/lucide/target'
+import LucideShapes from '~icons/lucide/shapes'
 
 const router = useRouter()
 
@@ -220,6 +267,10 @@ const showCoverage = ref(true)
 const recomputing = ref(false)
 const hiddenPlants = reactive(new Set()) // plant names toggled off
 const showPlantList = ref(false)
+const zones = ref([])
+const showZones = ref(true)
+const drawingZone = ref(false)
+const zoneDialog = reactive({ show: false, points: [], name: null, zone_name: '', territory: '', plant: '', assigned_rep: '', color: '#3F51B5' })
 const routeStops = ref([]) // selected record ids, in pick order
 
 let map = null
@@ -230,6 +281,8 @@ let geocoder = null
 let homeMarker = null
 const markers = {} // id -> google.maps.Marker
 let plantOverlays = [] // markers + circles for plants/coverage
+let zoneOverlays = [] // zone polygons
+let drawingManager = null
 
 const mappedCount = computed(() => records.value.filter((r) => r.lat != null).length)
 
@@ -264,6 +317,7 @@ onMounted(async () => {
     await loadGoogle(settings.value.api_key)
     initMap()
     loadPlants()
+    loadZones()
     await loadRecords()
   } catch (e) {
     toast.error(__('Failed to load Google Maps'))
@@ -277,7 +331,7 @@ function loadGoogle(key) {
     const s = document.createElement('script')
     s.src =
       `https://maps.googleapis.com/maps/api/js?key=${key}` +
-      `&libraries=places,geometry&callback=__crmInitMap&loading=async`
+      `&libraries=places,geometry,drawing&callback=__crmInitMap&loading=async`
     s.async = true
     s.onerror = reject
     document.head.appendChild(s)
@@ -386,6 +440,84 @@ function setAllPlants(show) {
   hiddenPlants.clear()
   if (!show) plants.value.forEach((p) => hiddenPlants.add(p.name))
   renderPlants()
+}
+
+/* ── zones (drawn territory polygons, Phase 2b) ────────────────────────────── */
+async function loadZones() {
+  try { zones.value = await call('crm.api.maps.get_zones'); renderZones() }
+  catch (e) { /* zones optional */ }
+}
+function clearZones() { zoneOverlays.forEach((o) => o.setMap(null)); zoneOverlays = [] }
+function renderZones() {
+  clearZones()
+  if (!showZones.value) return
+  zones.value.forEach((z) => {
+    if (!z.points || z.points.length < 3) return
+    const poly = new google.maps.Polygon({
+      map,
+      paths: z.points.map((pt) => ({ lat: pt[0], lng: pt[1] })),
+      strokeColor: z.color || '#3F51B5', strokeOpacity: 0.8, strokeWeight: 2,
+      fillColor: z.color || '#3F51B5', fillOpacity: 0.12, zIndex: 2,
+    })
+    poly.addListener('click', (e) => {
+      const plantName = (plants.value.find((p) => p.name === z.plant) || {}).plant_name || z.plant || '—'
+      const rep = (settings.value?.reps || []).find((r) => r.id === z.assigned_rep)
+      infoWindow.setContent(
+        `<div style="min-width:180px"><strong>${escapeHtml(z.zone_name)}</strong>` +
+        (z.territory ? `<div style="font-size:12px;color:#666">${escapeHtml(z.territory)}</div>` : '') +
+        `<div style="font-size:12px;color:#555;margin-top:3px">Plant: <b>${escapeHtml(plantName)}</b></div>` +
+        (rep ? `<div style="font-size:12px;color:#555">Rep: <b>${escapeHtml(rep.name)}</b></div>` : '') +
+        (settings.value?.is_manager
+          ? `<div style="margin-top:6px"><a href="#" id="crm-zone-del" style="font-size:12px;font-weight:600;color:#E0533B">Delete zone</a></div>` : '') +
+        `</div>`)
+      infoWindow.setPosition(e.latLng)
+      infoWindow.open(map)
+      google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
+        const a = document.getElementById('crm-zone-del')
+        if (a) a.addEventListener('click', (ev) => { ev.preventDefault(); deleteZone(z) })
+      })
+    })
+    zoneOverlays.push(poly)
+  })
+}
+
+function toggleDrawZone() {
+  drawingZone.value = !drawingZone.value
+  if (!drawingManager) {
+    drawingManager = new google.maps.drawing.DrawingManager({
+      drawingMode: null,
+      drawingControl: false,
+      polygonOptions: { fillColor: '#3F51B5', fillOpacity: 0.15, strokeColor: '#3F51B5', strokeWeight: 2, clickable: false },
+    })
+    drawingManager.setMap(map)
+    drawingManager.addListener('polygoncomplete', (poly) => {
+      const pts = poly.getPath().getArray().map((ll) => [ll.lat(), ll.lng()])
+      poly.setMap(null) // remove temp; we re-render from server after save
+      drawingManager.setDrawingMode(null)
+      drawingZone.value = false
+      Object.assign(zoneDialog, { show: true, points: pts, name: null, zone_name: '', territory: '', plant: '', assigned_rep: '', color: '#3F51B5' })
+    })
+  }
+  drawingManager.setDrawingMode(drawingZone.value ? google.maps.drawing.OverlayType.POLYGON : null)
+}
+
+async function saveZone() {
+  if (!zoneDialog.zone_name) { toast.warning(__('Zone name is required')); return }
+  try {
+    await call('crm.api.maps.save_zone', { zone: JSON.stringify({
+      name: zoneDialog.name, zone_name: zoneDialog.zone_name, territory: zoneDialog.territory,
+      plant: zoneDialog.plant || null, assigned_rep: zoneDialog.assigned_rep || null,
+      color: zoneDialog.color, points: zoneDialog.points,
+    }) })
+    zoneDialog.show = false
+    toast.success(__('Zone saved'))
+    loadZones()
+  } catch (e) { toast.error(e?.messages?.[0] || __('Save failed')) }
+}
+
+async function deleteZone(z) {
+  try { await call('crm.api.maps.delete_zone', { name: z.name }); infoWindow.close(); loadZones() }
+  catch (e) { toast.error(__('Delete failed')) }
 }
 
 async function recomputeCoverage() {
