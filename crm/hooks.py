@@ -176,6 +176,10 @@ doc_events = {
 			"crm.fcrm.doctype.erpnext_crm_settings.erpnext_crm_settings.create_customer_in_erpnext"
 		],
 	},
+	"CRM Lead": {
+		# Plantvu: flag a new lead that matches an existing Customer as Expansion.
+		"after_insert": ["crm.api.reconcile.on_lead_insert"],
+	},
 	"User": {
 		"before_validate": ["crm.api.live_demo.validate_user"],
 		"validate_reset_password": ["crm.api.live_demo.validate_reset_password"],

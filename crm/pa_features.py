@@ -55,6 +55,9 @@ FEATURES = [
     {"key": "crm.smart_leads", "label": "Smart Leads (territory prospecting)", "kind": "feature",
      "category": "CRM", "default_on": True,
      "methods": ["crm.api.smart_leads.discover", "crm.api.smart_leads.create_leads"]},
+    {"key": "crm.reconcile", "label": "Lead ↔ Customer Reconcile (expansion)", "kind": "feature",
+     "category": "CRM", "default_on": True,
+     "methods": ["crm.api.reconcile.match_lead", "crm.api.reconcile.reconcile_lead"]},
 ]
 
 
