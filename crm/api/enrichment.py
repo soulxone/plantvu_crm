@@ -238,7 +238,6 @@ def _enrich_all_job(kinds="customer", limit=300, user=None, only_stale=False):
 	wanted = [k.strip() for k in str(kinds).split(",") if k.strip()]
 	dt_map = {"customer": ("Customer", maps._collect_customers),
 	          "lead": ("CRM Lead", maps._collect_leads)}
-	cache = frappe.cache().get_value(maps.GEO_CACHE_KEY) or {}
 	cutoff = add_to_date(now_datetime(), days=-30)
 	done = found = 0
 	for k in wanted:
@@ -248,8 +247,10 @@ def _enrich_all_job(kinds="customer", limit=300, user=None, only_stale=False):
 		for rec in collector(None, 10000):
 			if done >= limit:
 				break
+			# enrich_record geocodes via Places, so only an address is needed —
+			# do NOT gate on the volatile geocode cache (cleared on every deploy).
 			addr = (rec.get("address") or "").strip()
-			if not addr or addr not in cache:
+			if not addr:
 				continue
 			name = rec["ref"]["name"]
 			if only_stale:
