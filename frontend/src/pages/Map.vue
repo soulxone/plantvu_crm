@@ -396,13 +396,18 @@ import LucideSparkles from '~icons/lucide/sparkles'
 
 const router = useRouter()
 
-const KIND_META = {
+// Plantvu-default pin colors. Brand-AGNOSTIC core: per-tenant overrides arrive in
+// get_map_settings().branding (plantvu_admin PA Map Brand) and are applied on load
+// by applyBranding(). reactive() so the legend swatches update with the brand.
+const KIND_META = reactive({
   lead: { label: 'Leads', color: '#FF9800' },
-  customer: { label: 'Customers', color: '#E1251B' },
+  customer: { label: 'Customers', color: '#0B9E92' },
   organization: { label: 'Organizations', color: '#7C4DFF' },
   deal: { label: 'Deals', color: '#3F51B5' },
-}
+})
 const kindMeta = KIND_META
+// Resolved brand for this tenant; defaults to Plantvu (teal + Plantvu mark).
+const brand = ref({ customer_glyph: 'plantvu-mark', customer_logo: '', accent_color: '#0B9E92' })
 
 const mapEl = ref(null)
 const searchEl = ref(null)
@@ -487,6 +492,7 @@ onMounted(async () => {
     toast.error(e?.messages?.[0] || __('Failed to load map settings'))
     return
   }
+  applyBranding(settings.value?.branding)
   if (!settings.value.api_key) {
     keyMissing.value = true
     return
@@ -841,19 +847,49 @@ function geocodeOne(addr, tries = 0) {
   })
 }
 
+/* ── brand ─────────────────────────────────────────────────────────────── */
+// Apply the per-tenant brand (from get_map_settings().branding) over the Plantvu
+// defaults. Pin colors flow into the reactive KIND_META; the customer glyph is
+// read live by customerGlyph().
+function applyBranding(b) {
+  if (!b) return
+  brand.value = b
+  if (b.customer_pin_color) KIND_META.customer.color = b.customer_pin_color
+  if (b.lead_pin_color) KIND_META.lead.color = b.lead_pin_color
+  if (b.deal_pin_color) KIND_META.deal.color = b.deal_pin_color
+  if (b.organization_pin_color) KIND_META.organization.color = b.organization_pin_color
+}
+
+// Brand marks for the customer pin's white circle.
+// Plantvu mark = the 3 ascending bars of the Plantvu logo (dark #06251F).
+const PLANTVU_MARK =
+  `<g fill="#06251F">` +
+  `<rect x="8.6" y="13.2" width="2.2" height="4.3" rx="0.6"/>` +
+  `<rect x="11.9" y="11.1" width="2.2" height="6.4" rx="0.6"/>` +
+  `<rect x="15.2" y="8.6" width="2.2" height="8.9" rx="0.6"/></g>`
+// Corrugated box = liner panel + fluted (wavy) edge — the Welch / corrugated mark.
+const CORRUGATED_BOX =
+  `<g fill="none" stroke="#111" stroke-width="1.15" stroke-linejoin="round" stroke-linecap="round">` +
+  `<rect x="8" y="9.4" width="7.4" height="7.2" rx="0.4"/>` +
+  `<path d="M11.7 9.4v7.2"/>` +
+  `<path d="M15.4 9.8c1.2 .55 1.2 1.1 0 1.65c1.2 .55 1.2 1.1 0 1.65c1.2 .55 1.2 1.1 0 1.65c1.2 .55 1.2 1.1 0 1.65"/></g>`
+function customerGlyph() {
+  const g = brand.value?.customer_glyph || 'plantvu-mark'
+  if (g === 'none') return ''
+  if (g === 'corrugated-box') return CORRUGATED_BOX
+  return PLANTVU_MARK
+}
+
 /* ── markers ───────────────────────────────────────────────────────────── */
 function pinIcon(kind, selected) {
   const color = KIND_META[kind]?.color || '#666'
   const sel = !!selected
   // selected stops get a dark selection ring so they stand out for routing
   const ring = sel ? `<circle cx="13" cy="13" r="12" fill="none" stroke="#111" stroke-width="2.5"/>` : ''
-  // Customer pins carry a black corrugated-box glyph (fluted edge) inside the white circle.
-  const glyph = kind === 'customer'
-    ? `<g fill="none" stroke="#111" stroke-width="1.15" stroke-linejoin="round" stroke-linecap="round">` +
-      `<rect x="8" y="9.4" width="7.4" height="7.2" rx="0.4"/>` +
-      `<path d="M11.7 9.4v7.2"/>` +
-      `<path d="M15.4 9.8c1.2 .55 1.2 1.1 0 1.65c1.2 .55 1.2 1.1 0 1.65c1.2 .55 1.2 1.1 0 1.65c1.2 .55 1.2 1.1 0 1.65"/></g>`
-    : ''
+  // Customer pins carry a brand glyph inside the white circle (brand-driven, not
+  // hardcoded): Plantvu mark (3 ascending bars) by default, corrugated fluted box
+  // for Welch. Chosen by the resolved brand.customer_glyph.
+  const glyph = kind === 'customer' ? customerGlyph() : ''
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="38" viewBox="0 0 26 38">` +
     `<path d="M13 0C5.8 0 0 5.8 0 13c0 9 13 25 13 25s13-16 13-25C26 5.8 20.2 0 13 0z" fill="${color}"/>` +

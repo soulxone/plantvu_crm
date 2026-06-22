@@ -284,11 +284,42 @@ def _collect_deals(rep, limit):
 	return out
 
 
+# ── per-tenant brand (data, not code) ───────────────────────────────────────
+# The map fork is brand-AGNOSTIC: it ships the Plantvu default and asks
+# plantvu_admin (if installed) for the per-company override. Welch red therefore
+# lives in welchwyse's PA Map Brand row, never hardcoded here. See
+# plantvu_admin/branding.py. Soft dependency — defaults stand alone if the admin
+# app is absent or the crm.map_branding feature is off.
+_BRAND_DEFAULT = {
+	"customer_pin_color": "#0B9E92",
+	"customer_glyph": "plantvu-mark",
+	"customer_logo": "",
+	"lead_pin_color": "#FF9800",
+	"deal_pin_color": "#3F51B5",
+	"organization_pin_color": "#7C4DFF",
+	"accent_color": "#0B9E92",
+}
+
+
+def _get_branding():
+	brand = dict(_BRAND_DEFAULT)
+	try:
+		if "plantvu_admin" in frappe.get_installed_apps():
+			fn = frappe.get_attr("plantvu_admin.branding.get_map_brand")
+			override = fn() or {}
+			for field in _BRAND_DEFAULT:
+				if override.get(field):
+					brand[field] = override[field]
+	except Exception:
+		pass
+	return brand
+
+
 # ── whitelisted endpoints ───────────────────────────────────────────────────
 
 @frappe.whitelist()
 def get_map_settings():
-	"""Key, map id, home base, manager flag, and rep list for the map page."""
+	"""Key, map id, home base, manager flag, rep list, and brand for the map page."""
 	_require_crm_user()
 	s = _settings()
 	is_mgr = _is_manager()
@@ -304,6 +335,7 @@ def get_map_settings():
 		"is_manager": is_mgr,
 		"current_user": frappe.session.user,
 		"kinds": KINDS,
+		"branding": _get_branding(),
 		"reps": reps,
 	}
 
