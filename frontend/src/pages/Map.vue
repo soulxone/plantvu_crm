@@ -398,7 +398,7 @@ const router = useRouter()
 
 const KIND_META = {
   lead: { label: 'Leads', color: '#FF9800' },
-  customer: { label: 'Customers', color: '#0B9E92' },
+  customer: { label: 'Customers', color: '#E1251B' },
   organization: { label: 'Organizations', color: '#7C4DFF' },
   deal: { label: 'Deals', color: '#3F51B5' },
 }
@@ -847,10 +847,17 @@ function pinIcon(kind, selected) {
   const sel = !!selected
   // selected stops get a dark selection ring so they stand out for routing
   const ring = sel ? `<circle cx="13" cy="13" r="12" fill="none" stroke="#111" stroke-width="2.5"/>` : ''
+  // Customer pins carry a black corrugated-box glyph (fluted edge) inside the white circle.
+  const glyph = kind === 'customer'
+    ? `<g fill="none" stroke="#111" stroke-width="1.15" stroke-linejoin="round" stroke-linecap="round">` +
+      `<rect x="8" y="9.4" width="7.4" height="7.2" rx="0.4"/>` +
+      `<path d="M11.7 9.4v7.2"/>` +
+      `<path d="M15.4 9.8c1.2 .55 1.2 1.1 0 1.65c1.2 .55 1.2 1.1 0 1.65c1.2 .55 1.2 1.1 0 1.65c1.2 .55 1.2 1.1 0 1.65"/></g>`
+    : ''
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="38" viewBox="0 0 26 38">` +
     `<path d="M13 0C5.8 0 0 5.8 0 13c0 9 13 25 13 25s13-16 13-25C26 5.8 20.2 0 13 0z" fill="${color}"/>` +
-    `<circle cx="13" cy="13" r="7.5" fill="#fff"/>${ring}</svg>`
+    `<circle cx="13" cy="13" r="7.5" fill="#fff"/>${glyph}${ring}</svg>`
   return {
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
     scaledSize: new google.maps.Size(26, 38),
