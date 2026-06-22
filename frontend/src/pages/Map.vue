@@ -877,7 +877,15 @@ function customerGlyph() {
   const g = brand.value?.customer_glyph || 'plantvu-mark'
   if (g === 'none') return ''
   if (g === 'corrugated-box') return CORRUGATED_BOX
+  if (g.startsWith('letter:')) return letterGlyph(g.slice(7))
   return PLANTVU_MARK
+}
+// A black initial (e.g. "letter:W" for Welch) centered in the white circle.
+function letterGlyph(ch) {
+  const c = escapeHtml((ch || '').slice(0, 2).toUpperCase())
+  if (!c) return ''
+  return `<text x="13" y="13" text-anchor="middle" dominant-baseline="central" ` +
+    `font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="11" fill="#111">${c}</text>`
 }
 
 /* ── markers ───────────────────────────────────────────────────────────── */
