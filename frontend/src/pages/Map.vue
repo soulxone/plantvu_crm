@@ -424,10 +424,10 @@ const showCoverage = ref(true)
 const showRingList = ref(false)
 // selectable coverage-ring distances (miles) — toggle each on/off at will
 const ringBands = reactive([
-  { mi: 25, on: false, color: '#0B9E92' },
+  { mi: 25, on: true, color: '#0B9E92' },
   { mi: 50, on: true, color: '#1FA85A' },
   { mi: 100, on: true, color: '#F0A000' },
-  { mi: 150, on: true, color: '#E0533B' },
+  { mi: 150, on: false, color: '#E0533B' },
 ])
 const customRing = reactive({ mi: 200, on: false, color: '#3F51B5' })
 const recomputing = ref(false)
