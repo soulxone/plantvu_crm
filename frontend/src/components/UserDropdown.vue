@@ -80,7 +80,15 @@ const dropdownItems = computed(() => {
     {
       group: 'Dropdown Items',
       hideLabel: true,
-      items: [],
+      items: [
+        {
+          icon: 'home',
+          label: __('Home'),
+          onClick: () => {
+            window.location.href = '/'
+          },
+        },
+      ],
     },
   ]
 
